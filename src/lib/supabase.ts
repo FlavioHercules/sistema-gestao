@@ -1,15 +1,29 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Busca das variáveis do Vite
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-  },
-});
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error(
+    "⚠️ ATENÇÃO: As variáveis VITE_SUPABASE_URL e/ou VITE_SUPABASE_ANON_KEY não foram encontradas no ambiente!"
+  );
+}
+
+export const supabase = createClient(
+  supabaseUrl || "https://placeholder.supabase.co", // evita o crash fatal no import
+  supabaseAnonKey || "placeholder-key",
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
+  }
+);
+
+// ----- Domain types matching the database schema -----
+// (Seus tipos continuam iguais aqui abaixo...)
 
 // ----- Domain types matching the database schema -----
 
