@@ -32,19 +32,19 @@ export function Login() {
     })();
   }, []);
 
+  // Redirecionamento baseado no tipo de usuário autenticado
   if (!loading && usuario) {
-    return (
-      <Navigate
-        to={
-          usuario.tipo_usuario === "secretaria"
-            ? "/secretaria"
-            : usuario.tipo_usuario === "aluno"
-              ? "/aluno"
-              : "/professor"
-        }
-        replace
-      />
-    );
+    let targetPath = "/professor";
+
+    if (usuario.tipo_usuario === "secretaria") {
+      targetPath = "/secretaria";
+    } else if (usuario.tipo_usuario === "coordenacao") {
+      targetPath = "/coordenacao";
+    } else if (usuario.tipo_usuario === "aluno") {
+      targetPath = "/aluno";
+    }
+
+    return <Navigate to={targetPath} replace />;
   }
 
   async function handleLogin(e: FormEvent) {

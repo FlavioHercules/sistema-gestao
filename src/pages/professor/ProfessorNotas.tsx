@@ -1,19 +1,20 @@
 import { useEffect, useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { ClipboardList, School, Loader2, Save, CheckCircle2, Edit2, Layers } from "lucide-react";
+import { ClipboardList, School, Loader2, Save, CheckCircle2, Edit2, Layers, TrendingUp, GraduationCap } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import type { Turma, Aluno, Nota } from "../../lib/supabase";
-import { calculateMedia, getAlunosByTurma, getNotasByProfessorAndTurma, getTurmasByProfessor, saveProfessorNote } from "../../lib/school";
+import { calculateMedia, getAlunosByTurma, getNotasByProfessorAndTurma, saveProfessorNote } from "../../lib/school";
+import { supabase } from "../../lib/supabase";
 import { AppLayout } from "../../components/layout/AppLayout";
 import { Card, CardContent } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { PageHeader, ErrorBanner } from "../../components/ui/Misc";
 
 const navItems = [
-  { to: "/professor", label: "Dashboard", icon: <ClipboardList size={18} /> },
-  { to: "/professor/turmas", label: "Minhas turmas", icon: <ClipboardList size={18} /> },
+  { to: "/professor", label: "Dashboard", icon: <TrendingUp size={18} /> },
+  { to: "/professor/turmas", label: "Minhas turmas", icon: <School size={18} /> },
   { to: "/professor/notas", label: "Notas", icon: <ClipboardList size={18} /> },
-  { to: "/professor/boletim", label: "Boletins", icon: <ClipboardList size={18} /> },
+  { to: "/professor/boletim", label: "Boletins", icon: <GraduationCap size={18} /> },
 ];
 
 const UNIDADES = [
@@ -37,10 +38,17 @@ interface DraftAluno {
   isDirty?: boolean;
 }
 
+interface VinculoProf {
+  turma_id: string;
+  disciplina_id: string;
+  turmas: Turma;
+}
+
 export function ProfessorNotas() {
   const { professor } = useAuth();
   const [params, setParams] = useSearchParams();
   const [turmas, setTurmas] = useState<Turma[]>([]);
+  const [vinculos, setVinculos] = useState<VinculoProf[]>([]);
   const [alunos, setAlunos] = useState<AlunoComNota[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingAll, setSavingAll] = useState(false);
@@ -59,6 +67,12 @@ export function ProfessorNotas() {
   const selectedUnidade = Number(params.get("unidade") ?? "1");
   const selectedTurma = params.get("turma") ?? "";
 
+  // Recupera o ID da disciplina vinculada a esta turma
+  const selectedDisciplinaId = useMemo(() => {
+    const vinculo = vinculos.find((v) => v.turma_id === selectedTurma);
+    return vinculo?.disciplina_id ?? "";
+  }, [vinculos, selectedTurma]);
+
   // Estado unificado da planilha por aluno
   const [draft, setDraft] = useState<Record<string, DraftAluno>>({});
 
@@ -67,38 +81,57 @@ export function ProfessorNotas() {
     return Object.values(draft).some((d) => d.isDirty);
   }, [draft]);
 
-  // Carrega turmas
+  // Carrega turmas e vínculos do professor
   useEffect(() => {
-    if (!professor) return;
+    if (!professor?.id) return;
+
     (async () => {
       try {
-        const profTurmas = await getTurmasByProfessor(professor.id);
+        const { data: vData, error: vErr } = await supabase
+          .from("professor_turma_disciplina")
+          .select("turma_id, disciplina_id, turmas (id, nome, ano_letivo, curso)")
+          .eq("professor_id", professor.id);
+
+        if (vErr) throw vErr;
+
+        const listaVinculos = (vData ?? []) as unknown as VinculoProf[];
+        setVinculos(listaVinculos);
+
+        const turmasMap = new Map<string, Turma>();
+        listaVinculos.forEach((v) => {
+          if (v.turmas && !turmasMap.has(v.turmas.id)) {
+            turmasMap.set(v.turmas.id, v.turmas);
+          }
+        });
+
+        const profTurmas = Array.from(turmasMap.values());
         setTurmas(profTurmas);
-        if (!selectedTurma && profTurmas.length > 0) {
-          setParams({ turma: profTurmas[0].id, unidade: "1" }, { replace: true });
+
+        if (profTurmas.length > 0 && (!selectedTurma || !profTurmas.some((t) => t.id === selectedTurma))) {
+          setParams({ turma: profTurmas[0].id, unidade: String(selectedUnidade) }, { replace: true });
         }
-      } catch {
+      } catch (err) {
+        console.error("Erro ao carregar turmas:", err);
         setTurmas([]);
       } finally {
         setLoading(false);
       }
     })();
-  }, [professor]);
+  }, [professor?.id]);
 
-  // Carrega Alunos e Notas filtrando TAMBÉM por Unidade
+  // Carrega Alunos e Notas
   useEffect(() => {
-    if (!professor || !selectedTurma) {
+    if (!professor?.id || !selectedTurma) {
       setAlunos([]);
       setDraft({});
       return;
     }
+
     (async () => {
       setLoading(true);
       setError("");
       try {
         const alunosList = await getAlunosByTurma(selectedTurma);
-        
-        // Passa a unidade selecionada na busca
         const notasList = await getNotasByProfessorAndTurma(
           professor.id,
           selectedTurma,
@@ -114,7 +147,6 @@ export function ProfessorNotas() {
         }));
         setAlunos(merged);
 
-        // Prepara o draft para a unidade atual
         const newDraft: Record<string, DraftAluno> = {};
         for (const a of merged) {
           newDraft[a.id] = {
@@ -122,20 +154,24 @@ export function ProfessorNotas() {
             n2: a.nota?.nota_2 != null ? String(a.nota.nota_2) : "",
             n3: a.nota?.nota_3 != null ? String(a.nota.nota_3) : "",
             faltas: a.nota?.faltas != null ? String(a.nota.faltas) : "0",
-            observacao: a.observacao ?? "",
+            observacao: a.nota?.observacao ?? a.observacao ?? "",
             notaId: a.nota?.id,
             isDirty: false,
           };
         }
         setDraft(newDraft);
+      } catch (err) {
+        console.error("Erro ao carregar alunos e notas:", err);
+        setError("Erro ao carregar os dados dos alunos.");
       } finally {
         setLoading(false);
       }
     })();
-  }, [professor, selectedTurma, selectedUnidade]);
+  }, [professor?.id, selectedTurma, selectedUnidade]);
 
   // Atualização de Notas
-  const updateDraftNote = (alunoId: string, field: "n1" | "n2" | "n3", value: string) => {
+  const updateDraftNote = (alunoId: string, field: "n1" | "n2" | "n3", rawValue: string) => {
+    const value = rawValue.replace(",", ".");
     if (value !== "" && !/^\d{0,2}(\.\d{0,2})?$/.test(value)) return;
     if (value !== "" && Number(value) > 10) return;
 
@@ -185,9 +221,15 @@ export function ProfessorNotas() {
     ]);
   };
 
-  // Salvamento Lote da Unidade Atual
+  // Salvamento em Lote
   const handleSaveAll = async () => {
-    if (!professor || !selectedTurma || savingAll) return;
+    if (!professor?.id || !selectedTurma || savingAll) return;
+
+    if (!selectedDisciplinaId) {
+      setError("Não foi encontrada nenhuma disciplina vinculada a esta turma.");
+      return;
+    }
+
     setSavingAll(true);
     setError("");
 
@@ -199,24 +241,24 @@ export function ProfessorNotas() {
           alunoId,
           professorId: professor.id,
           turmaId: selectedTurma,
-          unidade: selectedUnidade, // Envia a unidade selecionada
+          disciplinaId: selectedDisciplinaId,
+          unidade: selectedUnidade,
           nota1: d.n1 === "" ? null : Number(d.n1),
           nota2: d.n2 === "" ? null : Number(d.n2),
           nota3: d.n3 === "" ? null : Number(d.n3),
           faltas: d.faltas === "" ? 0 : Number(d.faltas),
           observacao: d.observacao ?? null,
-        });
+        } as any);
 
-        return { alunoId, notaId: result.notaId };
+        return { alunoId, notaId: result?.notaId };
       });
 
       const results = await Promise.all(promises);
 
-      // Marca todos os registros alterados como salvos (isDirty = false)
       setDraft((prev) => {
         const next = { ...prev };
         for (const res of results) {
-          if (res?.alunoId) {
+          if (res?.alunoId && next[res.alunoId]) {
             next[res.alunoId] = {
               ...next[res.alunoId],
               notaId: res.notaId ?? next[res.alunoId].notaId,
@@ -274,20 +316,24 @@ export function ProfessorNotas() {
             Selecione a Turma:
           </span>
           <div className="flex flex-wrap gap-2">
-            {turmas.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => setParams({ turma: t.id, unidade: String(selectedUnidade) })}
-                className={`inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-medium transition-all ${
-                  selectedTurma === t.id
-                    ? "border-sky-500/50 bg-sky-500/15 text-sky-300 shadow-sm"
-                    : "border-slate-800 bg-slate-900/60 text-slate-300 hover:border-slate-700 hover:bg-slate-800/60"
-                }`}
-              >
-                <School size={14} />
-                {t.nome}
-              </button>
-            ))}
+            {turmas.length === 0 ? (
+              <span className="text-xs text-slate-500">Nenhuma turma encontrada.</span>
+            ) : (
+              turmas.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setParams({ turma: t.id, unidade: String(selectedUnidade) })}
+                  className={`inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-medium transition-all ${
+                    selectedTurma === t.id
+                      ? "border-sky-500/50 bg-sky-500/15 text-sky-300 shadow-sm"
+                      : "border-slate-800 bg-slate-900/60 text-slate-300 hover:border-slate-700 hover:bg-slate-800/60"
+                  }`}
+                >
+                  <School size={14} />
+                  {t.nome}
+                </button>
+              ))
+            )}
           </div>
         </div>
 
@@ -348,7 +394,6 @@ export function ProfessorNotas() {
                       Aluno
                     </th>
 
-                    {/* Cabeçalhos Editáveis estilo Excel */}
                     {(["n1", "n2", "n3"] as const).map((col) => (
                       <th key={col} className="px-3 py-3 font-medium text-center border-r border-slate-800/60 w-32">
                         <div className="flex items-center justify-center gap-1.5">
@@ -414,7 +459,6 @@ export function ProfessorNotas() {
                           isDirty ? "bg-amber-500/5 hover:bg-amber-500/10" : "bg-slate-900/30 hover:bg-slate-800/40"
                         }`}
                       >
-                        {/* Nome do Aluno */}
                         <td className="px-4 py-2.5 border-r border-slate-800/60">
                           <div className="flex items-center justify-between">
                             <div>
@@ -425,7 +469,6 @@ export function ProfessorNotas() {
                           </div>
                         </td>
 
-                        {/* Entradas das Notas */}
                         {(["n1", "n2", "n3"] as const).map((field) => (
                           <td key={field} className="px-2 py-2 text-center border-r border-slate-800/60">
                             <input
@@ -439,12 +482,10 @@ export function ProfessorNotas() {
                           </td>
                         ))}
 
-                        {/* Média recalculada na hora */}
                         <td className={`px-3 py-2 text-center border-r border-slate-800/60 font-mono ${mediaColor}`}>
                           {media !== null ? media.toFixed(1) : "—"}
                         </td>
 
-                        {/* Faltas */}
                         <td className="px-2 py-2 text-center border-r border-slate-800/60">
                           <input
                             type="text"
@@ -455,7 +496,6 @@ export function ProfessorNotas() {
                           />
                         </td>
 
-                        {/* Observações */}
                         <td className="px-3 py-2">
                           <input
                             type="text"

@@ -1,5 +1,15 @@
 import { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, School, Loader2, Users } from "lucide-react";
+import { 
+  Plus, 
+  Pencil, 
+  Trash2, 
+  Loader2, 
+  Users, 
+  GraduationCap, 
+  BookOpen, 
+  UserCheck, 
+  ShieldCheck 
+} from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import type { Turma } from "../../lib/supabase";
 import { AppLayout } from "../../components/layout/AppLayout";
@@ -12,17 +22,14 @@ import { SearchInput } from "../../components/ui/SearchInput";
 import { PageHeader, ErrorBanner } from "../../components/ui/Misc";
 
 const navItems = [
-  { to: "/secretaria", label: "Dashboard", icon: <School size={18} /> },
-  { to: "/secretaria/professores", label: "Professores", icon: <School size={18} /> },
-  { to: "/secretaria/alunos", label: "Alunos", icon: <School size={18} /> },
-  { to: "/secretaria/turmas", label: "Turmas", icon: <School size={18} /> },
-  { to: "/secretaria/associacoes", label: "Associações", icon: <School size={18} /> },
-  { to: "/secretaria/usuarios", label: "Usuários", icon: <School size={18} /> },
+  { to: "/secretaria", label: "Dashboard", icon: <GraduationCap size={18} /> },
+  { to: "/secretaria/alunos", label: "Alunos", icon: <Users size={18} /> },
+  { to: "/secretaria/turmas", label: "Turmas", icon: <BookOpen size={18} /> },
 ];
 
 type TurmaWithCounts = Turma & { aluno_count?: number; professor_count?: number };
 
-export function TurmasPage() {
+export function ListaTurmas() {
   const [turmas, setTurmas] = useState<TurmaWithCounts[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -87,8 +94,8 @@ export function TurmasPage() {
     setModalOpen(true);
   }
 
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSave(e?: React.FormEvent) {
+    if (e) e.preventDefault();
     setSaving(true);
     setError("");
     try {
@@ -244,7 +251,7 @@ export function TurmasPage() {
         footer={
           <>
             <Button variant="ghost" onClick={() => setModalOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave as unknown as () => void} disabled={saving}>
+            <Button onClick={() => handleSave()} disabled={saving}>
               {saving ? <Loader2 size={16} className="animate-spin" /> : "Salvar"}
             </Button>
           </>

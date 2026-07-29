@@ -1,231 +1,191 @@
 import { useEffect, useState, useMemo } from "react";
-import { Link } from "react-router-dom";
-import { 
-  Users, GraduationCap, School, ClipboardList, TrendingUp, 
-  AlertCircle, Award, Trophy, X, FileText, Layers, Search, Printer 
-} from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { GraduationCap, School, Loader2, Printer, Award, AlertCircle, ClipboardList, TrendingUp, MessageSquare, Users } from "lucide-react";
 import { supabase } from "../../lib/supabase";
-import type { Turma, Aluno, Nota } from "../../lib/supabase";
-import { calculateMedia } from "../../lib/school";
+import type { Turma, Aluno } from "../../lib/supabase";
+import { calculateMedia, getNotasByTurma } from "../../lib/school";
 import { AppLayout } from "../../components/layout/AppLayout";
-import { StatCard } from "../../components/ui/StatCard";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
-import { BarChart, DonutChart } from "../../components/ui/Charts";
-import { PageHeader, StatBadge } from "../../components/ui/Misc";
+import { StatBadge, PageHeader } from "../../components/ui/Misc";
+import { BarChart } from "../../components/ui/Charts";
 
 const navItems = [
+ 
   { to: "/secretaria", label: "Dashboard", icon: <TrendingUp size={18} /> },
-  { to: "/secretaria/professores", label: "Professores", icon: <GraduationCap size={18} /> },
-  { to: "/secretaria/alunos", label: "Alunos", icon: <Users size={18} /> },
+    { to: "/secretaria/alunos", label: "Alunos", icon: <Users size={18} /> },
+
   { to: "/secretaria/turmas", label: "Turmas", icon: <School size={18} /> },
-  { to: "/secretaria/associacoes", label: "Associações", icon: <ClipboardList size={18} /> },
-  { to: "/secretaria/usuarios", label: "Usuários", icon: <Users size={18} /> },
 ];
 
-const UNIDADES = [
-  { id: 1, label: "1ª Unidade" },
-  { id: 2, label: "2ª Unidade" },
-  { id: 3, label: "3ª Unidade" },
-  { id: 4, label: "4ª Unidade" },
-];
+type SituacaoAluno = "Aprovado" | "Recuperação" | "Reprovado" | "Reprovado por Faltas" | "Sem notas";
 
-interface Stats {
-  professores: number;
-  alunos: number;
-  turmas: number;
-  notas: number;
-}
-
-interface DisciplinaNota {
+interface DisciplinaLinha {
   disciplina: string;
-  professor: string;
-  unidade: number;
-  nota_1: number | null;
-  nota_2: number | null;
-  nota_3: number | null;
+  nota1: number | null;
+  nota2: number | null;
+  nota3: number | null;
   media: number | null;
   faltas: number;
-  observacao: string;
+  situacao: SituacaoAluno;
+  observacao: string | null;
 }
 
-interface AlunoStatus {
+interface BoletimAluno {
   aluno: Aluno;
-  media: number | null;
-  faltas: number;
-  observacao: string;
-  situacao: "Aprovado" | "Recuperação" | "Reprovado" | "Reprovado por Faltas" | "Sem notas";
-  detalhesDisciplinas: DisciplinaNota[];
+  disciplinas: DisciplinaLinha[];
+  totalFaltasGeral: number;
+  mediaGeral: number | null;
 }
 
 export function SecretariaDashboard() {
-  const [stats, setStats] = useState<Stats>({ professores: 0, alunos: 0, turmas: 0, notas: 0 });
+  const [params, setParams] = useSearchParams();
   const [turmas, setTurmas] = useState<Turma[]>([]);
-  const [selectedTurmaId, setSelectedTurmaId] = useState<string>("");
-  const [selectedUnidade, setSelectedUnidade] = useState<number>(1);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [boletins, setBoletins] = useState<BoletimAluno[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [alunosStatus, setAlunosStatus] = useState<AlunoStatus[]>([]);
-  const [selectedAluno, setSelectedAluno] = useState<AlunoStatus | null>(null);
-  const [loadingTurma, setLoadingTurma] = useState(false);
+  const selectedTurma = params.get("turma") ?? "";
 
-  // 1. Carrega dados estatísticos gerais e lista de turmas
+  // 1. Carrega todas as turmas cadastradas
   useEffect(() => {
     (async () => {
-      const [p, a, t, n, turmasRes] = await Promise.all([
-        supabase.from("professores").select("id", { count: "exact", head: true }),
-        supabase.from("alunos").select("id", { count: "exact", head: true }),
-        supabase.from("turmas").select("id", { count: "exact", head: true }),
-        supabase.from("notas").select("id", { count: "exact", head: true }),
-        supabase.from("turmas").select("*").order("nome", { ascending: true }),
-      ]);
+      try {
+        const { data: turmasData, error } = await supabase
+          .from("turmas")
+          .select("*")
+          .order("nome", { ascending: true });
 
-      setStats({
-        professores: p.count ?? 0,
-        alunos: a.count ?? 0,
-        turmas: t.count ?? 0,
-        notas: n.count ?? 0,
-      });
+        if (error) throw error;
 
-      const turmasData = (turmasRes.data ?? []) as Turma[];
-      setTurmas(turmasData);
+        const listaTurmas = (turmasData ?? []) as Turma[];
+        setTurmas(listaTurmas);
 
-      if (turmasData.length > 0) {
-        setSelectedTurmaId(turmasData[0].id);
+        if (listaTurmas.length > 0 && !selectedTurma) {
+          setParams({ turma: listaTurmas[0].id }, { replace: true });
+        }
+      } catch (err) {
+        console.error("Erro ao carregar turmas na Secretaria:", err);
       }
     })();
   }, []);
 
-  // 2. Carrega notas e alunos filtrados por Turma e Unidade
+  // 2. Carrega alunos, disciplinas e notas da turma selecionada
   useEffect(() => {
-    if (!selectedTurmaId) return;
+    if (!selectedTurma) {
+      setBoletins([]);
+      setLoading(false);
+      return;
+    }
 
     (async () => {
-      setLoadingTurma(true);
+      setLoading(true);
+      try {
+        // Busca os alunos da turma
+        const { data: aluData, error: errAlunos } = await supabase
+          .from("alunos")
+          .select("*")
+          .eq("turma_id", selectedTurma)
+          .order("nome", { ascending: true });
 
-      const { data: alunosData } = await supabase
-        .from("alunos")
-        .select("*")
-        .eq("turma_id", selectedTurmaId)
-        .order("nome", { ascending: true });
+        if (errAlunos) console.error("Erro ao buscar alunos:", errAlunos);
+        const alunosList = (aluData ?? []) as Aluno[];
 
-      const alunosList = (alunosData ?? []) as Aluno[];
+        // Busca todas as notas com relacionamento de disciplina via school.ts
+        const notasList = await getNotasByTurma(selectedTurma);
 
-      // Filtra as notas da Turma E da Unidade Selecionada
-      const { data: notasData } = await supabase
-        .from("notas")
-        .select("*, professor: professores(nome, disciplina)")
-        .eq("turma_id", selectedTurmaId)
-        .eq("unidade", selectedUnidade);
+        // Monta a estrutura agrupada por aluno com lista de disciplinas
+        const result: BoletimAluno[] = alunosList.map((aluno) => {
+          const notasDoAluno = notasList.filter((n) => n.aluno_id === aluno.id);
 
-      const notasList = (notasData ?? []) as (Nota & { professor?: { nome: string; disciplina: string } })[];
+          const disciplinas: DisciplinaLinha[] = notasDoAluno.map((n) => {
+            const media = calculateMedia([n.nota_1, n.nota_2, n.nota_3]);
+            const faltas = n.faltas ?? 0;
+            const obs = n.observacao || null;
 
-      const statusMapeado: AlunoStatus[] = alunosList.map((aluno) => {
-        const notasDoAluno = notasList.filter((n) => n.aluno_id === aluno.id);
+            let situacao: SituacaoAluno = "Sem notas";
+            if (faltas > 25) {
+              situacao = "Reprovado por Faltas";
+            } else if (media !== null) {
+              if (media >= 7) situacao = "Aprovado";
+              else if (media >= 5) situacao = "Recuperação";
+              else situacao = "Reprovado";
+            }
 
-        let totalFaltas = 0;
-        const mediasDisciplinas: number[] = [];
-        const observacoes: string[] = [];
+            return {
+              disciplinaNome: n.disciplina?.nome || "Disciplina não especificada",
+              nota1: n.nota_1,
+              nota2: n.nota_2,
+              nota3: n.nota_3,
+              media,
+              faltas,
+              situacao,
+              observacao: obs,
+            };
+          });
 
-        const detalhesDisciplinas: DisciplinaNota[] = notasDoAluno.map((n) => {
-          totalFaltas += n.faltas ?? 0;
-          const mediaDisc = calculateMedia([n.nota_1, n.nota_2, n.nota_3]);
-          if (mediaDisc !== null) mediasDisciplinas.push(mediaDisc);
-          if (n.observacao) observacoes.push(n.observacao);
+          const totalFaltasGeral = disciplinas.reduce((acc, d) => acc + d.faltas, 0);
+          const mediasValidas = disciplinas.map((d) => d.media).filter((m): m is number => m !== null);
+          const mediaGeral = mediasValidas.length > 0
+            ? mediasValidas.reduce((a, b) => a + b, 0) / mediasValidas.length
+            : null;
 
           return {
-            disciplina: n.professor?.disciplina ?? "Geral",
-            professor: n.professor?.nome ?? "Professor",
-            unidade: n.unidade ?? selectedUnidade,
-            nota_1: n.nota_1,
-            nota_2: n.nota_2,
-            nota_3: n.nota_3,
-            media: mediaDisc,
-            faltas: n.faltas ?? 0,
-            observacao: n.observacao ?? "",
+            aluno,
+            disciplinas,
+            totalFaltasGeral,
+            mediaGeral,
           };
         });
 
-        const mediaGeral =
-          mediasDisciplinas.length > 0
-            ? mediasDisciplinas.reduce((a, b) => a + b, 0) / mediasDisciplinas.length
-            : null;
-
-        let situacao: AlunoStatus["situacao"] = "Sem notas";
-        if (totalFaltas > 25) {
-          situacao = "Reprovado por Faltas";
-        } else if (mediaGeral !== null) {
-          if (mediaGeral >= 7) situacao = "Aprovado";
-          else if (mediaGeral >= 5) situacao = "Recuperação";
-          else situacao = "Reprovado";
-        }
-
-        return {
-          aluno,
-          media: mediaGeral,
-          faltas: totalFaltas,
-          observacao: observacoes.join(" | ") || "Sem observações",
-          situacao,
-          detalhesDisciplinas,
-        };
-      });
-
-      setAlunosStatus(statusMapeado);
-      setLoadingTurma(false);
+        setBoletins(result);
+      } catch (err) {
+        console.error("Erro ao carregar dados do painel da secretaria:", err);
+      } finally {
+        setLoading(false);
+      }
     })();
-  }, [selectedTurmaId, selectedUnidade]);
+  }, [selectedTurma]);
 
-  // Filtro de pesquisa de alunos
-  const alunosFiltrados = useMemo(() => {
-    if (!searchQuery.trim()) return alunosStatus;
-    const q = searchQuery.toLowerCase();
-    return alunosStatus.filter(
-      (item) =>
-        item.aluno.nome.toLowerCase().includes(q) ||
-        item.aluno.matricula.toLowerCase().includes(q)
-    );
-  }, [alunosStatus, searchQuery]);
+  const currentTurma = useMemo(
+    () => turmas.find((t) => t.id === selectedTurma),
+    [turmas, selectedTurma]
+  );
 
-  // Resumo da turma
-  const resumoTurma = useMemo(() => {
-    const aprov = alunosStatus.filter((a) => a.situacao === "Aprovado").length;
-    const rec = alunosStatus.filter((a) => a.situacao === "Recuperação").length;
-    const reprov = alunosStatus.filter(
-      (a) => a.situacao === "Reprovado" || a.situacao === "Reprovado por Faltas"
-    ).length;
-    const semNotas = alunosStatus.filter((a) => a.situacao === "Sem notas").length;
+  // Métrica consolidada baseada nas disciplinas registradas
+  const resumo = useMemo(() => {
+    let aprov = 0;
+    let rec = 0;
+    let reprov = 0;
+    let semNotas = 0;
+
+    boletins.forEach((b) => {
+      if (b.disciplinas.length === 0) {
+        semNotas++;
+      } else {
+        b.disciplinas.forEach((d) => {
+          if (d.situacao === "Aprovado") aprov++;
+          else if (d.situacao === "Recuperação") rec++;
+          else if (d.situacao === "Reprovado" || d.situacao === "Reprovado por Faltas") reprov++;
+          else semNotas++;
+        });
+      }
+    });
 
     return { aprov, rec, reprov, semNotas };
-  }, [alunosStatus]);
+  }, [boletins]);
 
-  // Identificação do melhor aluno
-  const melhorAluno = useMemo(() => {
-    const alunosComMedia = alunosStatus.filter((a) => a.media !== null);
-    if (alunosComMedia.length === 0) return null;
-
-    return alunosComMedia.reduce((melhor, atual) => {
-      return (atual.media ?? 0) > (melhor.media ?? 0) ? atual : melhor;
-    }, alunosComMedia[0]);
-  }, [alunosStatus]);
-
-  // Gráfico formatado
-  const chartData = useMemo(() => {
-    return alunosFiltrados
-      .filter((a) => a.media !== null)
-      .map((a) => {
-        const partesNome = a.aluno.nome.trim().split(" ");
-        const primeiroNome = partesNome[0];
-        const sobrenomeInicial = partesNome.length > 1 ? ` ${partesNome[1][0]}.` : "";
-        const labelFormatado = `${primeiroNome}${sobrenomeInicial}`;
-
-        return {
-          label: labelFormatado,
-          value: Number((a.media as number).toFixed(1)),
+  const chartData = useMemo(
+    () =>
+      boletins
+        .filter((b) => b.mediaGeral !== null)
+        .map((b) => ({
+          label: b.aluno.nome.split(" ")[0],
+          value: b.mediaGeral as number,
           max: 10,
-        };
-      });
-  }, [alunosFiltrados]);
+        })),
+    [boletins]
+  );
 
-  function situacaoBadge(s: AlunoStatus["situacao"]) {
+  function situacaoBadge(s: SituacaoAluno) {
     if (s === "Aprovado") {
       return (
         <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-300">
@@ -255,7 +215,7 @@ export function SecretariaDashboard() {
       );
     }
     return (
-      <span className="rounded-md bg-slate-700 px-2 py-0.5 text-xs font-medium text-slate-400">
+      <span className="rounded-md bg-slate-700/60 px-2 py-0.5 text-xs font-medium text-slate-400">
         Sem notas
       </span>
     );
@@ -264,337 +224,171 @@ export function SecretariaDashboard() {
   return (
     <AppLayout navItems={navItems} brandLabel="EduGrade" brandSub="Painel da Secretaria">
       <PageHeader
-        title="Dashboard da Secretaria"
-        description="Visão geral do sistema e acompanhamento detalhado por turma e unidade."
+        title="Painel Geral da Secretaria"
+        description="Acompanhamento do rendimento escolar, disciplinas, notas e pareceres por aluno."
+        action={
+          <button
+            onClick={() => window.print()}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800/40 px-3.5 py-2 text-sm font-medium text-slate-200 hover:bg-slate-800/70 transition-colors"
+          >
+            <Printer size={15} /> Imprimir Relatório
+          </button>
+        }
       />
 
-      {/* Cards globais */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Professores" value={stats.professores} icon={<GraduationCap size={22} />} accent="sky" />
-        <StatCard label="Alunos" value={stats.alunos} icon={<Users size={22} />} accent="emerald" />
-        <StatCard label="Turmas" value={stats.turmas} icon={<School size={22} />} accent="amber" />
-        <StatCard label="Notas lançadas" value={stats.notas} icon={<ClipboardList size={22} />} accent="violet" />
+      {/* Seleção de Turma */}
+      <div className="mb-5 flex flex-wrap gap-2">
+        {turmas.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setParams({ turma: t.id })}
+            className={`inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-medium transition-all ${
+              selectedTurma === t.id
+                ? "border-sky-500/50 bg-sky-500/15 text-sky-300"
+                : "border-slate-800 bg-slate-900/60 text-slate-300 hover:border-slate-700 hover:bg-slate-800/60"
+            }`}
+          >
+            <School size={14} />
+            {t.nome}
+          </button>
+        ))}
       </div>
 
-      {/* Seletores: Turma e Unidade */}
-      <div className="mt-8 mb-4 space-y-4">
-        {/* Seleção de Turmas */}
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-semibold text-white">Acompanhamento por Turma</h2>
-            <p className="text-xs text-slate-400">Selecione uma turma para carregar os relatórios</p>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {turmas.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => setSelectedTurmaId(t.id)}
-                className={`inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-medium transition-all ${
-                  selectedTurmaId === t.id
-                    ? "border-sky-500/50 bg-sky-500/15 text-sky-300 shadow-sm"
-                    : "border-slate-800 bg-slate-900/60 text-slate-300 hover:border-slate-700 hover:bg-slate-800/60"
-                }`}
-              >
-                <School size={14} />
-                {t.nome}
-              </button>
-            ))}
-          </div>
+      {loading ? (
+        <div className="flex items-center justify-center py-16 text-slate-500">
+          <Loader2 className="animate-spin" />
         </div>
-
-        {/* Seleção de Unidade Letiva */}
-        <div className="flex items-center gap-2 pt-2 border-t border-slate-800/60">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 mr-2">
-            Unidade Letiva:
-          </span>
-          <div className="flex flex-wrap gap-2">
-            {UNIDADES.map((u) => (
-              <button
-                key={u.id}
-                onClick={() => setSelectedUnidade(u.id)}
-                className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1 text-xs font-medium transition-all ${
-                  selectedUnidade === u.id
-                    ? "border-amber-500/50 bg-amber-500/15 text-amber-300"
-                    : "border-slate-800 bg-slate-900/40 text-slate-400 hover:bg-slate-800/40"
-                }`}
-              >
-                <Layers size={13} />
-                {u.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {loadingTurma ? (
-        <p className="py-12 text-center text-sm text-slate-500">Carregando dados da turma...</p>
+      ) : boletins.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <GraduationCap size={32} className="mx-auto mb-3 text-slate-600" />
+            <p className="text-slate-400">Nenhum aluno registrado para esta turma.</p>
+          </CardContent>
+        </Card>
       ) : (
         <>
-          {/* Card Destaque: Melhor Aluno */}
-          {melhorAluno && (
-            <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-amber-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/30">
-                    <Trophy size={20} />
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-amber-400">
-                      Destaque da Turma na {selectedUnidade}ª Unidade
-                    </p>
-                    <p className="text-base font-bold text-white">
-                      {melhorAluno.aluno.nome}{" "}
-                      <span className="text-sm font-normal text-amber-300">
-                        (Média: {melhorAluno.media?.toFixed(1)})
-                      </span>
-                    </p>
-                  </div>
-                </div>
-              </div>
+          {/* Métricas e Resumos por Matéria Registrada */}
+          <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+              <p className="text-xs text-emerald-300/80">Matérias Aprovadas</p>
+              <p className="mt-1 text-2xl font-bold text-emerald-300">{resumo.aprov}</p>
             </div>
+            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+              <p className="text-xs text-amber-300/80">Em Recuperação</p>
+              <p className="mt-1 text-2xl font-bold text-amber-300">{resumo.rec}</p>
+            </div>
+            <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-4">
+              <p className="text-xs text-rose-300/80">Matérias Reprovadas</p>
+              <p className="mt-1 text-2xl font-bold text-rose-300">{resumo.reprov}</p>
+            </div>
+            <div className="rounded-xl border border-slate-700/60 bg-slate-800/40 p-4">
+              <p className="text-xs text-slate-400">Pendentes de Nota</p>
+              <p className="mt-1 text-2xl font-bold text-slate-300">{resumo.semNotas}</p>
+            </div>
+          </div>
+
+          {/* Gráfico de Médias Gerais */}
+          {chartData.length > 0 && (
+            <Card className="mb-5">
+              <CardHeader>
+                <CardTitle>Médias Gerais por Aluno — {currentTurma?.nome}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <BarChart
+                  data={chartData}
+                  color="bg-gradient-to-t from-sky-600 to-sky-400"
+                  height={180}
+                />
+              </CardContent>
+            </Card>
           )}
 
-          {/* Gráficos */}
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle>Média dos Alunos ({selectedUnidade}ª Unidade)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {chartData.length === 0 ? (
-                  <p className="text-sm text-slate-500">Nenhum desempenho registrado para esta unidade.</p>
-                ) : (
-                  <BarChart data={chartData} color="bg-gradient-to-t from-sky-600 to-sky-400" height={200} />
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Distribuição Geral</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <DonutChart
-                  segments={[
-                    { label: "Aprovados", value: resumoTurma.aprov, color: "#10b981" },
-                    { label: "Recuperação", value: resumoTurma.rec, color: "#f59e0b" },
-                    { label: "Reprovados", value: resumoTurma.reprov, color: "#f43f5e" },
-                  ]}
-                />
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Tabela de Alunos com Pesquisa */}
-          <Card className="mt-6">
-            <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <CardTitle>Status dos Alunos ({alunosFiltrados.length} alunos)</CardTitle>
-                <p className="text-xs text-slate-400">Clique sobre um aluno para abrir o boletim da unidade</p>
-              </div>
-
-              {/* Input de Busca */}
-              <div className="relative w-full sm:w-64">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                <input
-                  type="text"
-                  placeholder="Buscar aluno ou matrícula..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full rounded-lg border border-slate-800 bg-slate-900/90 pl-8 pr-3 py-1.5 text-xs text-slate-200 placeholder:text-slate-500 focus:border-sky-500 focus:outline-none"
-                />
-              </div>
-            </CardHeader>
-            <CardContent>
-              {alunosFiltrados.length === 0 ? (
-                <p className="py-6 text-center text-sm text-slate-500">Nenhum aluno encontrado.</p>
-              ) : (
-                <div className="overflow-x-auto rounded-xl border border-slate-800">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="bg-slate-900/80 text-left text-slate-400">
-                        <th className="px-4 py-3 font-medium">Aluno</th>
-                        <th className="px-3 py-3 font-medium text-center">Média ({selectedUnidade}ª Unid.)</th>
-                        <th className="px-3 py-3 font-medium text-center">Faltas</th>
-                        <th className="px-4 py-3 font-medium text-center">Situação</th>
-                        <th className="px-4 py-3 font-medium">Observações</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800/80">
-                      {alunosFiltrados.map((item) => (
-                        <tr
-                          key={item.aluno.id}
-                          onClick={() => setSelectedAluno(item)}
-                          className="bg-slate-900/30 hover:bg-slate-800/60 cursor-pointer transition-colors"
-                        >
-                          <td className="px-4 py-3">
-                            <p className="font-medium text-white">{item.aluno.nome}</p>
-                            <p className="text-xs text-slate-500">{item.aluno.matricula}</p>
-                          </td>
-                          <td className="px-3 py-3 text-center">
-                            <StatBadge value={item.media} label="média" />
-                          </td>
-                          <td className="px-3 py-3 text-center font-medium text-slate-300">
-                            {item.faltas}
-                          </td>
-                          <td className="px-4 py-3 text-center">{situacaoBadge(item.situacao)}</td>
-                          <td className="px-4 py-3 text-xs text-slate-400 max-w-xs truncate">
-                            {item.observacao}
-                          </td>
+          {/* Lista de Boletins Individuais (1 por Aluno com Tabela de Disciplinas) */}
+          <div className="space-y-6">
+            {boletins.map(({ aluno, disciplinas, totalFaltasGeral, mediaGeral }) => (
+              <Card key={aluno.id} className="overflow-hidden">
+                <CardHeader className="bg-slate-900/60 border-b border-slate-800 flex flex-row items-center justify-between py-4">
+                  <div>
+                    <CardTitle className="text-lg text-white">{aluno.nome}</CardTitle>
+                    <p className="text-xs text-slate-400">Matrícula: {aluno.matricula || "N/A"}</p>
+                  </div>
+                  <div className="flex items-center gap-4 text-right">
+                    <div>
+                      <span className="text-xs text-slate-400 block">Total Faltas:</span>
+                      <span className={`text-sm font-bold ${totalFaltasGeral > 25 ? "text-rose-400" : "text-slate-200"}`}>
+                        {totalFaltasGeral}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-xs text-slate-400 block">Média Geral:</span>
+                      <StatBadge value={mediaGeral} label="geral" />
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-slate-950/40 text-left text-slate-400 border-b border-slate-800 text-xs uppercase tracking-wider">
+                          <th className="px-4 py-3 font-medium">Disciplina</th>
+                          <th className="px-3 py-3 font-medium text-center">N1</th>
+                          <th className="px-3 py-3 font-medium text-center">N2</th>
+                          <th className="px-3 py-3 font-medium text-center">N3</th>
+                          <th className="px-3 py-3 font-medium text-center">Média</th>
+                          <th className="px-3 py-3 font-medium text-center">Faltas</th>
+                          <th className="px-4 py-3 font-medium">Situação</th>
+                          <th className="px-4 py-3 font-medium">Observação do Professor</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/60">
+                        {disciplinas.length === 0 ? (
+                          <tr>
+                            <td colSpan={8} className="px-4 py-6 text-center text-slate-500">
+                              Nenhuma disciplina lançada para este aluno nesta turma.
+                            </td>
+                          </tr>
+                        ) : (
+                          disciplinas.map((d, idx) => (
+                            <tr key={idx} className="bg-slate-900/20 hover:bg-slate-800/30 transition-colors">
+                              <td className="px-4 py-3 font-medium text-slate-200">{d.disciplinaNome}</td>
+                              <td className="px-3 py-3 text-center text-slate-300 font-mono">
+                                {d.nota1 !== null ? d.nota1 : "—"}
+                              </td>
+                              <td className="px-3 py-3 text-center text-slate-300 font-mono">
+                                {d.nota2 !== null ? d.nota2 : "—"}
+                              </td>
+                              <td className="px-3 py-3 text-center text-slate-300 font-mono">
+                                {d.nota3 !== null ? d.nota3 : "—"}
+                              </td>
+                              <td className="px-3 py-3 text-center">
+                                <StatBadge value={d.media} label="média" />
+                              </td>
+                              <td className="px-3 py-3 text-center font-mono text-slate-300">
+                                {d.faltas}
+                              </td>
+                              <td className="px-4 py-3">{situacaoBadge(d.situacao)}</td>
+                              <td className="px-4 py-3 text-xs text-slate-400 max-w-xs">
+                                {d.observacao ? (
+                                  <span className="inline-flex items-center gap-1.5 text-slate-300" title={d.observacao}>
+                                    <MessageSquare size={13} className="text-sky-400 shrink-0" />
+                                    <span className="truncate">{d.observacao}</span>
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-600">—</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </>
       )}
-
-      {/* Modal de Detalhes do Aluno */}
-      {selectedAluno && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-2xl rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500/15 text-sky-300">
-                  <FileText size={20} />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-white">{selectedAluno.aluno.nome}</h3>
-                  <p className="text-xs text-slate-400">
-                    Matrícula: {selectedAluno.aluno.matricula} · <span className="text-amber-400 font-medium">{selectedUnidade}ª Unidade</span>
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setSelectedAluno(null)}
-                className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="my-4 grid grid-cols-3 gap-3 text-center">
-              <div className="rounded-xl bg-slate-800/50 p-3 border border-slate-700/50">
-                <p className="text-xs text-slate-400">Média na Unidade</p>
-                <p className="mt-1 text-lg font-bold text-sky-300">
-                  {selectedAluno.media !== null ? selectedAluno.media.toFixed(1) : "—"}
-                </p>
-              </div>
-              <div className="rounded-xl bg-slate-800/50 p-3 border border-slate-700/50">
-                <p className="text-xs text-slate-400">Faltas na Unidade</p>
-                <p className="mt-1 text-lg font-bold text-slate-200">{selectedAluno.faltas}</p>
-              </div>
-              <div className="rounded-xl bg-slate-800/50 p-3 border border-slate-700/50 flex flex-col justify-center items-center">
-                <p className="text-xs text-slate-400 mb-1">Situação</p>
-                {situacaoBadge(selectedAluno.situacao)}
-              </div>
-            </div>
-
-            <h4 className="mb-2 text-sm font-semibold text-slate-300">Desempenho por Disciplina</h4>
-            <div className="max-h-60 overflow-y-auto rounded-xl border border-slate-800">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="bg-slate-800/80 text-left text-slate-400">
-                    <th className="px-3 py-2 font-medium">Disciplina / Prof.</th>
-                    <th className="px-2 py-2 text-center font-medium">N1</th>
-                    <th className="px-2 py-2 text-center font-medium">N2</th>
-                    <th className="px-2 py-2 text-center font-medium">N3</th>
-                    <th className="px-2 py-2 text-center font-medium">Média</th>
-                    <th className="px-2 py-2 text-center font-medium">Faltas</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800">
-                  {selectedAluno.detalhesDisciplinas.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="py-4 text-center text-slate-500">
-                        Nenhuma nota lançada nesta unidade.
-                      </td>
-                    </tr>
-                  ) : (
-                    selectedAluno.detalhesDisciplinas.map((d, index) => (
-                      <tr key={index} className="bg-slate-900/50">
-                        <td className="px-3 py-2.5 font-medium text-white">
-                          <p>{d.disciplina}</p>
-                          <p className="text-[10px] text-slate-500">{d.professor}</p>
-                        </td>
-                        <td className="px-2 py-2.5 text-center text-slate-300">{d.nota_1 ?? "—"}</td>
-                        <td className="px-2 py-2.5 text-center text-slate-300">{d.nota_2 ?? "—"}</td>
-                        <td className="px-2 py-2.5 text-center text-slate-300">{d.nota_3 ?? "—"}</td>
-                        <td className="px-2 py-2.5 text-center font-bold text-sky-400">
-                          {d.media !== null ? d.media.toFixed(1) : "—"}
-                        </td>
-                        <td className="px-2 py-2.5 text-center text-slate-300">{d.faltas}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="mt-6 flex justify-between items-center">
-              <button
-                onClick={() => window.print()}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-700"
-              >
-                <Printer size={14} /> Imprimir
-              </button>
-              <button
-                onClick={() => setSelectedAluno(null)}
-                className="rounded-lg bg-sky-600 px-4 py-2 text-xs font-semibold text-white hover:bg-sky-500"
-              >
-                Fechar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Atalhos Rápidos */}
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Link to="/secretaria/professores" className="group">
-          <Card className="h-full transition-transform group-hover:-translate-y-0.5">
-            <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-sky-500/15 text-sky-300 ring-1 ring-sky-500/20">
-                <GraduationCap size={20} />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-white">Gerenciar professores</p>
-                <p className="text-xs text-slate-500">Cadastrar e vincular disciplinas</p>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link to="/secretaria/alunos" className="group">
-          <Card className="h-full transition-transform group-hover:-translate-y-0.5">
-            <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/20">
-                <Users size={20} />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-white">Gerenciar alunos</p>
-                <p className="text-xs text-slate-500">Matricular e atribuir turmas</p>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link to="/secretaria/associacoes" className="group">
-          <Card className="h-full transition-transform group-hover:-translate-y-0.5">
-            <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/20">
-                <ClipboardList size={20} />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-white">Associações</p>
-                <p className="text-xs text-slate-500">Vincular professores a turmas</p>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-      </div>
     </AppLayout>
   );
 }

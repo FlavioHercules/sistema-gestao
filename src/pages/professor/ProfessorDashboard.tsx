@@ -16,83 +16,126 @@ const navItems = [
   { to: "/professor/boletim", label: "Boletins", icon: <GraduationCap size={18} /> },
 ];
 
+interface TurmaInfo {
+  id: string;
+  nome: string;
+  ano_letivo: number;
+  aluno_count: number;
+}
+
 export function ProfessorDashboard() {
   const { professor } = useAuth();
-  const [turmas, setTurmas] = useState<{ id: string; nome: string; ano_letivo: number; aluno_count: number }[]>([]);
+  const [turmas, setTurmas] = useState<TurmaInfo[]>([]);
   const [stats, setStats] = useState({ turmas: 0, alunos: 0, notas: 0, mediaGeral: 0 });
   const [mediaPorTurma, setMediaPorTurma] = useState<{ label: string; value: number }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!professor) return;
-    (async () => {
-      // Turmas do professor
-      const { data: tp } = await supabase
-        .from("turma_professores")
-        .select("turma: turmas(*)")
-        .eq("professor_id", professor.id);
-      const profTurmas = ((tp ?? []) as unknown as { turma: { id: string; nome: string; ano_letivo: number } }[]).map(
-        (r) => r.turma
-      );
+    if (!professor?.id) return;
 
-      // Alunos por turma
-      const turmaIds = profTurmas.map((t) => t.id);
-      let alunoCount = 0;
-      const turmasComContagem = [];
-      for (const t of profTurmas) {
-        const { count } = await supabase
-          .from("alunos")
-          .select("id", { count: "exact", head: true })
-          .eq("turma_id", t.id);
-        turmasComContagem.push({ ...t, aluno_count: count ?? 0 });
-        alunoCount += count ?? 0;
-      }
-      setTurmas(turmasComContagem);
+    async function fetchDashboardData() {
+      setLoading(true);
+      try {
+        // 1. Busca as turmas vinculadas ao professor (via professor_turma_disciplina)
+        const { data: vinculos, error: vinculosErr } = await supabase
+          .from("professor_turma_disciplina")
+          .select("turma_id, turmas (id, nome, ano_letivo)")
+          .eq("professor_id", professor.id);
 
-      // Notas do professor
-      const { data: notas, count: notasCount } = await supabase
-        .from("notas")
-        .select("media, turma_id", { count: "exact" })
-        .eq("professor_id", professor.id)
-        .not("media", "is", null);
+        if (vinculosErr) throw vinculosErr;
 
-      const mediaGeral =
-        notas && notas.length > 0
-          ? notas.reduce((s, n) => s + Number(n.media), 0) / notas.length
-          : 0;
+        // Remove turmas duplicadas e nulas (caso lecione mais de uma disciplina para a mesma turma)
+        const turmasMap = new Map<string, { id: string; nome: string; ano_letivo: number }>();
+        (vinculos ?? []).forEach((v: any) => {
+          if (v.turmas && !turmasMap.has(v.turmas.id)) {
+            turmasMap.set(v.turmas.id, v.turmas);
+          }
+        });
 
-      // média por turma
-      const porTurma = new Map<string, { soma: number; count: number }>();
-      for (const n of notas ?? []) {
-        const turma = profTurmas.find((t) => t.id === n.turma_id);
-        const nome = turma?.nome ?? "—";
-        const cur = porTurma.get(nome) ?? { soma: 0, count: 0 };
-        cur.soma += Number(n.media);
-        cur.count += 1;
-        porTurma.set(nome, cur);
-      }
-      setMediaPorTurma(
-        Array.from(porTurma.entries()).map(([label, v]) => ({
+        const profTurmas = Array.from(turmasMap.values());
+        const turmaIds = profTurmas.map((t) => t.id);
+
+        // 2. Busca contagem de alunos para cada turma em paralelo
+        let totalAlunos = 0;
+        const turmasComAlunos: TurmaInfo[] = await Promise.all(
+          profTurmas.map(async (t) => {
+            const { count } = await supabase
+              .from("alunos")
+              .select("id", { count: "exact", head: true })
+              .eq("turma_id", t.id);
+
+            const qtd = count ?? 0;
+            totalAlunos += qtd;
+            return { ...t, aluno_count: qtd };
+          })
+        );
+
+        setTurmas(turmasComAlunos);
+
+        // 3. Busca as notas lançadas pelo professor
+        if (turmaIds.length === 0) {
+          setStats({ turmas: 0, alunos: 0, notas: 0, mediaGeral: 0 });
+          setMediaPorTurma([]);
+          setLoading(false);
+          return;
+        }
+
+        const { data: notas, count: notasCount } = await supabase
+          .from("notas")
+          .select("media, turma_id", { count: "exact" })
+          .eq("professor_id", professor.id)
+          .not("media", "is", null);
+
+        // Média Geral
+        const arrayNotas = notas ?? [];
+        const mediaGeral =
+          arrayNotas.length > 0
+            ? arrayNotas.reduce((acc, n) => acc + Number(n.media || 0), 0) / arrayNotas.length
+            : 0;
+
+        // Média por Turma
+        const agrupamentoPorTurma = new Map<string, { soma: number; count: number }>();
+
+        for (const n of arrayNotas) {
+          const turma = profTurmas.find((t) => t.id === n.turma_id);
+          if (!turma) continue;
+
+          const nome = turma.nome;
+          const atual = agrupamentoPorTurma.get(nome) ?? { soma: 0, count: 0 };
+          atual.soma += Number(n.media || 0);
+          atual.count += 1;
+          agrupamentoPorTurma.set(nome, atual);
+        }
+
+        const barrasGrafico = Array.from(agrupamentoPorTurma.entries()).map(([label, v]) => ({
           label,
-          value: v.count ? v.soma / v.count : 0,
-        }))
-      );
+          value: v.count > 0 ? Number((v.soma / v.count).toFixed(1)) : 0,
+        }));
 
-      setStats({
-        turmas: profTurmas.length,
-        alunos: alunoCount,
-        notas: notasCount ?? 0,
-        mediaGeral,
-      });
-      setLoading(false);
-    })();
-  }, [professor]);
+        setMediaPorTurma(barrasGrafico);
+
+        // Atualiza os cards estáticos
+        setStats({
+          turmas: profTurmas.length,
+          alunos: totalAlunos,
+          notas: notasCount ?? 0,
+          mediaGeral,
+        });
+      } catch (error) {
+        console.error("Erro ao carregar dados do dashboard do professor:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchDashboardData();
+  }, [professor?.id]);
 
   return (
     <AppLayout navItems={navItems} brandLabel="EduGrade" brandSub="Área do Professor">
       <PageHeader
         title={`Olá, ${professor?.nome?.split(" ")[0] ?? "Professor"}`}
-        description={`${professor?.disciplina ?? ""} — aqui está o resumo da sua atividade`}
+        description={`${professor?.disciplina ?? "Docente"} — aqui está o resumo da sua atividade`}
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -115,7 +158,7 @@ export function ProfessorDashboard() {
           </CardHeader>
           <CardContent>
             {loading ? (
-              <p className="text-sm text-slate-500">Carregando...</p>
+              <p className="text-sm text-slate-500">Carregando dados do gráfico...</p>
             ) : mediaPorTurma.length === 0 ? (
               <p className="text-sm text-slate-500">Nenhuma nota lançada ainda.</p>
             ) : (
@@ -133,7 +176,9 @@ export function ProfessorDashboard() {
             <CardTitle>Minhas turmas</CardTitle>
           </CardHeader>
           <CardContent>
-            {turmas.length === 0 ? (
+            {loading ? (
+              <p className="text-sm text-slate-500">Carregando turmas...</p>
+            ) : turmas.length === 0 ? (
               <p className="text-sm text-slate-500">Nenhuma turma vinculada a você.</p>
             ) : (
               <div className="space-y-2">
@@ -145,7 +190,9 @@ export function ProfessorDashboard() {
                   >
                     <div>
                       <p className="text-sm font-medium text-white">{t.nome}</p>
-                      <p className="text-xs text-slate-500">{t.aluno_count} aluno(s) · {t.ano_letivo}</p>
+                      <p className="text-xs text-slate-500">
+                        {t.aluno_count} aluno(s) · {t.ano_letivo}
+                      </p>
                     </div>
                     <ArrowRight size={15} className="text-slate-500 group-hover:text-sky-300 transition-colors" />
                   </Link>

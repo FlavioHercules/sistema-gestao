@@ -2,16 +2,27 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { Login } from "./pages/Login";
+
+// Páginas da Secretaria
 import { SecretariaDashboard } from "./pages/secretaria/SecretariaDashboard";
-import { ProfessoresPage } from "./pages/secretaria/ProfessoresPage";
 import { AlunosPage } from "./pages/secretaria/AlunosPage";
-import { TurmasPage } from "./pages/secretaria/TurmasPage";
-import { AssociacoesPage } from "./pages/secretaria/AssociacoesPage";
-import { UsuariosPage } from "./pages/secretaria/UsuariosPage";
+import { ListaTurmas } from "./pages/secretaria/ListaTurmas";
+
+// Páginas da Coordenação
+import { CoordenacaoDashboardPage } from "./pages/coordenacao/DashboardPage";
+import { CoordenacaoProfessoresPage } from "./pages/coordenacao/ProfessoresPage";
+import { CoordenacaoDisciplinasPage } from "./pages/coordenacao/DisciplinasPage"; // <-- ADICIONADO AQUI
+import { CoordenacaoTurmasPage } from "./pages/coordenacao/TurmasPage";
+import { CoordenacaoAssociacoesPage } from "./pages/coordenacao/AssociacoesPage";
+import { UsuariosPage } from "./pages/coordenacao/UsuariosPage";
+
+// Páginas do Professor
 import { ProfessorDashboard } from "./pages/professor/ProfessorDashboard";
 import { ProfessorTurmas } from "./pages/professor/ProfessorTurmas";
 import { ProfessorNotas } from "./pages/professor/ProfessorNotas";
 import { ProfessorBoletim } from "./pages/professor/ProfessorBoletim";
+
+// Páginas do Aluno
 import { AlunoDashboard } from "./pages/aluno/AlunoDashboard";
 
 export default function App() {
@@ -20,19 +31,13 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+
+          {/* ROTAS DA SECRETARIA */}
           <Route
             path="/secretaria"
             element={
               <ProtectedRoute roles={["secretaria"]}>
                 <SecretariaDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/secretaria/professores"
-            element={
-              <ProtectedRoute roles={["secretaria"]}>
-                <ProfessoresPage />
               </ProtectedRoute>
             }
           />
@@ -48,26 +53,65 @@ export default function App() {
             path="/secretaria/turmas"
             element={
               <ProtectedRoute roles={["secretaria"]}>
-                <TurmasPage />
+                <ListaTurmas />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ROTAS DA COORDENAÇÃO */}
+          <Route
+            path="/coordenacao"
+            element={
+              <ProtectedRoute roles={["coordenacao", "secretaria"]}>
+                <CoordenacaoDashboardPage />
               </ProtectedRoute>
             }
           />
           <Route
-            path="/secretaria/associacoes"
+            path="/coordenacao/professores"
             element={
-              <ProtectedRoute roles={["secretaria"]}>
-                <AssociacoesPage />
+              <ProtectedRoute roles={["coordenacao", "secretaria"]}>
+                <CoordenacaoProfessoresPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ROTA DE DISCIPLINAS ADICIONADA AQUI */}
+          <Route
+            path="/coordenacao/disciplinas"
+            element={
+              <ProtectedRoute roles={["coordenacao", "secretaria"]}>
+                <CoordenacaoDisciplinasPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/coordenacao/turmas"
+            element={
+              <ProtectedRoute roles={["coordenacao", "secretaria"]}>
+                <CoordenacaoTurmasPage />
               </ProtectedRoute>
             }
           />
           <Route
-            path="/secretaria/usuarios"
+            path="/coordenacao/associacoes"
             element={
-              <ProtectedRoute roles={["secretaria"]}>
+              <ProtectedRoute roles={["coordenacao", "secretaria"]}>
+                <CoordenacaoAssociacoesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/coordenacao/usuarios"
+            element={
+              <ProtectedRoute roles={["coordenacao", "secretaria"]}>
                 <UsuariosPage />
               </ProtectedRoute>
             }
           />
+
+          {/* ROTAS DO PROFESSOR */}
           <Route
             path="/professor"
             element={
@@ -100,6 +144,8 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* ROTAS DO ALUNO */}
           <Route
             path="/aluno"
             element={
@@ -108,6 +154,8 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* Rota padrão */}
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>

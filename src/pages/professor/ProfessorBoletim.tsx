@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { GraduationCap, School, Loader2, Printer, Award, AlertCircle } from "lucide-react";
+import { GraduationCap, School, Loader2, Printer, Award, AlertCircle, ClipboardList, TrendingUp } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../context/AuthContext";
 import type { Turma, Aluno, Nota } from "../../lib/supabase";
@@ -12,9 +12,9 @@ import { BarChart } from "../../components/ui/Charts";
 import { PageHeader } from "../../components/ui/Misc";
 
 const navItems = [
-  { to: "/professor", label: "Dashboard", icon: <GraduationCap size={18} /> },
-  { to: "/professor/turmas", label: "Minhas turmas", icon: <GraduationCap size={18} /> },
-  { to: "/professor/notas", label: "Notas", icon: <GraduationCap size={18} /> },
+  { to: "/professor", label: "Dashboard", icon: <TrendingUp size={18} /> },
+  { to: "/professor/turmas", label: "Minhas turmas", icon: <School size={18} /> },
+  { to: "/professor/notas", label: "Notas", icon: <ClipboardList size={18} /> },
   { to: "/professor/boletim", label: "Boletins", icon: <GraduationCap size={18} /> },
 ];
 
@@ -34,73 +34,108 @@ export function ProfessorBoletim() {
   const [turmas, setTurmas] = useState<Turma[]>([]);
   const [boletim, setBoletim] = useState<BoletimAluno[]>([]);
   const [loading, setLoading] = useState(true);
+  
   const selectedTurma = params.get("turma") ?? "";
+  const selectedUnidade = params.get("unidade") ?? "1";
 
+  // 1. Carrega as turmas atribuídas ao professor
   useEffect(() => {
-    if (!professor) return;
+    if (!professor?.id) return;
+
     (async () => {
-      const { data: tp } = await supabase
-        .from("turma_professores")
-        .select("turma: turmas(*)")
-        .eq("professor_id", professor.id);
-      const profTurmas = ((tp ?? []) as unknown as { turma: Turma }[]).map((r) => r.turma);
-      setTurmas(profTurmas);
-      if (!selectedTurma && profTurmas.length > 0) {
-        setParams({ turma: profTurmas[0].id }, { replace: true });
+      try {
+        const { data: vinculos, error } = await supabase
+          .from("professor_turma_disciplina")
+          .select("turmas (id, nome, ano_letivo, curso)")
+          .eq("professor_id", professor.id);
+
+        if (error) throw error;
+
+        const turmasMap = new Map<string, Turma>();
+        (vinculos ?? []).forEach((v: any) => {
+          if (v.turmas && !turmasMap.has(v.turmas.id)) {
+            turmasMap.set(v.turmas.id, v.turmas as Turma);
+          }
+        });
+
+        const profTurmas = Array.from(turmasMap.values());
+        setTurmas(profTurmas);
+
+        if (profTurmas.length > 0 && (!selectedTurma || !profTurmas.some((t) => t.id === selectedTurma))) {
+          setParams({ turma: profTurmas[0].id, unidade: selectedUnidade }, { replace: true });
+        }
+      } catch (err) {
+        console.error("Erro ao carregar turmas:", err);
+        setTurmas([]);
       }
     })();
-  }, [professor]);
+  }, [professor?.id]);
 
+  // 2. Carrega alunos e notas da turma selecionada
   useEffect(() => {
-    if (!professor || !selectedTurma) {
+    if (!professor?.id || !selectedTurma) {
       setBoletim([]);
       setLoading(false);
       return;
     }
+
     (async () => {
       setLoading(true);
-      const { data: aluData } = await supabase
-        .from("alunos")
-        .select("*")
-        .eq("turma_id", selectedTurma)
-        .order("nome", { ascending: true });
-      const alunosList = (aluData ?? []) as Aluno[];
+      try {
+        // Alunos da turma
+        const { data: aluData } = await supabase
+          .from("alunos")
+          .select("*")
+          .eq("turma_id", selectedTurma)
+          .order("nome", { ascending: true });
+        
+        const alunosList = (aluData ?? []) as Aluno[];
 
-      const { data: notasData } = await supabase
-        .from("notas")
-        .select("*")
-        .eq("professor_id", professor.id)
-        .eq("turma_id", selectedTurma);
-      const notasList = (notasData ?? []) as Nota[];
-      const notaByAluno = new Map<string, Nota>();
-      for (const n of notasList) notaByAluno.set(n.aluno_id, n);
+        // Notas lançadas pelo professor para esta turma
+        const { data: notasData } = await supabase
+          .from("notas")
+          .select("*")
+          .eq("professor_id", professor.id)
+          .eq("turma_id", selectedTurma);
 
-      const result: BoletimAluno[] = alunosList.map((a) => {
-        const nota = notaByAluno.get(a.id) ?? null;
-        const media = calculateMedia([nota?.nota_1 ?? null, nota?.nota_2 ?? null, nota?.nota_3 ?? null]);
-        const faltas = nota?.faltas ?? 0;
+        const notasList = (notasData ?? []) as Nota[];
+        const notaByAluno = new Map<string, Nota>();
+        for (const n of notasList) notaByAluno.set(n.aluno_id, n);
 
-        let situacao: SituacaoAluno = "Sem notas";
+        const result: BoletimAluno[] = alunosList.map((a) => {
+          const nota = notaByAluno.get(a.id) ?? null;
+          const media = calculateMedia([
+            nota?.nota_1 ?? null,
+            nota?.nota_2 ?? null,
+            nota?.nota_3 ?? null
+          ]);
+          const faltas = nota?.faltas ?? 0;
 
-        if (faltas > 25) {
-          situacao = "Reprovado por Faltas";
-        } else if (media !== null) {
-          if (media >= 7) {
-            situacao = "Aprovado";
-          } else if (media >= 5) {
-            situacao = "Recuperação";
-          } else {
-            situacao = "Reprovado";
+          let situacao: SituacaoAluno = "Sem notas";
+
+          if (faltas > 25) {
+            situacao = "Reprovado por Faltas";
+          } else if (media !== null) {
+            if (media >= 7) {
+              situacao = "Aprovado";
+            } else if (media >= 5) {
+              situacao = "Recuperação";
+            } else {
+              situacao = "Reprovado";
+            }
           }
-        }
 
-        return { aluno: a, nota, media, faltas, situacao };
-      });
+          return { aluno: a, nota, media, faltas, situacao };
+        });
 
-      setBoletim(result);
-      setLoading(false);
+        setBoletim(result);
+      } catch (err) {
+        console.error("Erro ao buscar dados do boletim:", err);
+      } finally {
+        setLoading(false);
+      }
     })();
-  }, [professor, selectedTurma]);
+  }, [professor?.id, selectedTurma]);
 
   const currentTurma = useMemo(
     () => turmas.find((t) => t.id === selectedTurma),
@@ -157,7 +192,7 @@ export function ProfessorBoletim() {
       );
     }
     return (
-      <span className="rounded-md bg-slate-700 px-2 py-0.5 text-xs font-medium text-slate-400">
+      <span className="rounded-md bg-slate-700/60 px-2 py-0.5 text-xs font-medium text-slate-400">
         Sem notas
       </span>
     );
@@ -171,22 +206,23 @@ export function ProfessorBoletim() {
         action={
           <button
             onClick={() => window.print()}
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800/40 px-3.5 py-2 text-sm font-medium text-slate-200 hover:bg-slate-800/70"
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800/40 px-3.5 py-2 text-sm font-medium text-slate-200 hover:bg-slate-800/70 transition-colors"
           >
             <Printer size={15} /> Imprimir
           </button>
         }
       />
 
+      {/* Seleção de Turma */}
       <div className="mb-5 flex flex-wrap gap-2">
         {turmas.map((t) => (
           <button
             key={t.id}
-            onClick={() => setParams({ turma: t.id })}
+            onClick={() => setParams({ turma: t.id, unidade: selectedUnidade })}
             className={`inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-medium transition-all ${
               selectedTurma === t.id
                 ? "border-sky-500/50 bg-sky-500/15 text-sky-300"
-                : "border-slate-700 bg-slate-800/40 text-slate-300 hover:border-slate-600 hover:bg-slate-800/70"
+                : "border-slate-800 bg-slate-900/60 text-slate-300 hover:border-slate-700 hover:bg-slate-800/60"
             }`}
           >
             <School size={14} />
@@ -222,12 +258,13 @@ export function ProfessorBoletim() {
               <p className="text-xs text-rose-300/80">Reprovados</p>
               <p className="mt-1 text-2xl font-bold text-rose-300">{resumo.reprov}</p>
             </div>
-            <div className="rounded-xl border border-slate-700 bg-slate-800/40 p-4">
+            <div className="rounded-xl border border-slate-700/60 bg-slate-800/40 p-4">
               <p className="text-xs text-slate-400">Sem notas</p>
               <p className="mt-1 text-2xl font-bold text-slate-300">{resumo.semNotas}</p>
             </div>
           </div>
 
+          {/* Gráfico de Desempenho */}
           {chartData.length > 0 && (
             <Card className="mb-5">
               <CardHeader>
@@ -243,18 +280,19 @@ export function ProfessorBoletim() {
             </Card>
           )}
 
+          {/* Tabela do Boletim */}
           <Card>
             <CardHeader>
               <CardTitle>Boletim — {currentTurma?.nome}</CardTitle>
               <p className="mt-1 text-xs text-slate-500">
-                Professor: {professor?.nome} · {professor?.disciplina}
+                Professor: {professor?.nome} {professor?.disciplina ? `· ${professor.disciplina}` : ""}
               </p>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto rounded-xl border border-slate-800">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-slate-900/80 text-left text-slate-400">
+                    <tr className="bg-slate-900/90 text-left text-slate-400 border-b border-slate-800">
                       <th className="px-4 py-3 font-medium">Aluno</th>
                       <th className="px-3 py-3 font-medium text-center">N1</th>
                       <th className="px-3 py-3 font-medium text-center">N2</th>
@@ -271,19 +309,19 @@ export function ProfessorBoletim() {
                           <p className="font-medium text-white">{b.aluno.nome}</p>
                           <p className="text-xs text-slate-500">{b.aluno.matricula}</p>
                         </td>
-                        <td className="px-3 py-3 text-center text-slate-300">
+                        <td className="px-3 py-3 text-center text-slate-300 font-mono">
                           {b.nota?.nota_1 != null ? b.nota.nota_1 : "—"}
                         </td>
-                        <td className="px-3 py-3 text-center text-slate-300">
+                        <td className="px-3 py-3 text-center text-slate-300 font-mono">
                           {b.nota?.nota_2 != null ? b.nota.nota_2 : "—"}
                         </td>
-                        <td className="px-3 py-3 text-center text-slate-300">
+                        <td className="px-3 py-3 text-center text-slate-300 font-mono">
                           {b.nota?.nota_3 != null ? b.nota.nota_3 : "—"}
                         </td>
                         <td className="px-3 py-3 text-center">
                           <StatBadge value={b.media} label="média" />
                         </td>
-                        <td className="px-3 py-3 text-center font-medium text-slate-300">
+                        <td className="px-3 py-3 text-center font-mono font-medium text-slate-300">
                           {b.faltas}
                         </td>
                         <td className="px-4 py-3">{situacaoBadge(b.situacao)}</td>

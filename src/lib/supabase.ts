@@ -27,7 +27,8 @@ export const supabase = createClient(
 
 // ----- Domain types matching the database schema -----
 
-export type TipoUsuario = "secretaria" | "professor" | "aluno";
+// Atualize a union de TipoUsuario para incluir a coordenação:
+export type TipoUsuario = "secretaria" | "coordenacao" | "professor" | "aluno";
 
 export interface Usuario {
   id: string;

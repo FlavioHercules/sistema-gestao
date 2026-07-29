@@ -14,11 +14,8 @@ import { PageHeader, ErrorBanner } from "../../components/ui/Misc";
 
 const navItems = [
   { to: "/secretaria", label: "Dashboard", icon: <Users size={18} /> },
-  { to: "/secretaria/professores", label: "Professores", icon: <Users size={18} /> },
   { to: "/secretaria/alunos", label: "Alunos", icon: <Users size={18} /> },
   { to: "/secretaria/turmas", label: "Turmas", icon: <Users size={18} /> },
-  { to: "/secretaria/associacoes", label: "Associações", icon: <Users size={18} /> },
-  { to: "/secretaria/usuarios", label: "Usuários", icon: <Users size={18} /> },
 ];
 
 type AlunoWithTurma = Aluno & { turma?: Turma | null };
