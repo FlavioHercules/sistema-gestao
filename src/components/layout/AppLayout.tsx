@@ -32,7 +32,7 @@ export function AppLayout({ navItems, brandLabel, brandSub, children }: AppLayou
         <NavLink
           key={item.to}
           to={item.to}
-          end={item.to === "/secretaria" || item.to === "/professor"}
+          end={item.to === "/secretaria" || item.to === "/professor" || item.to === "/aluno" || item.to === "/coordenacao"}
           onClick={() => setOpen(false)}
           className={({ isActive }) =>
             `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${

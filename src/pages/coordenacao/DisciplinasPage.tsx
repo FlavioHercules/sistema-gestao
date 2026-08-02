@@ -16,6 +16,8 @@ const navItems = [
   { to: "/coordenacao/disciplinas", label: "Disciplinas", icon: <BookOpen size={18} /> },
   { to: "/coordenacao/turmas", label: "Turmas", icon: <BookOpen size={18} /> },
   { to: "/coordenacao/associacoes", label: "Atribuir Disciplinas", icon: <Users size={18} /> },
+  { to: "/coordenacao/horarios", label: "Horários", icon: <GraduationCap size={18} /> },
+  { to: "/coordenacao/avisos", label: "Avisos", icon: <Users size={18} /> },
   { to: "/coordenacao/usuarios", label: "Usuários", icon: <Shield size={18} /> },
 ];
 

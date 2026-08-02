@@ -13,13 +13,13 @@ import { SearchInput } from "../../components/ui/SearchInput";
 import { PageHeader, ErrorBanner } from "../../components/ui/Misc";
 
 const navItems = [
- 
-    { to: "/coordenacao", label: "Dashboard", icon: <GraduationCap size={18} /> },
-    { to: "/coordenacao/professores", label: "Professores", icon: <UserCheck size={18} /> },
-    { to: "/coordenacao/disciplinas", label: "Disciplinas", icon: <BookOpen size={18} /> },
-
-    { to: "/coordenacao/turmas", label: "Turmas", icon: <BookOpen size={18} /> },
+  { to: "/coordenacao", label: "Dashboard", icon: <GraduationCap size={18} /> },
+  { to: "/coordenacao/professores", label: "Professores", icon: <UserCheck size={18} /> },
+  { to: "/coordenacao/disciplinas", label: "Disciplinas", icon: <BookOpen size={18} /> },
+  { to: "/coordenacao/turmas", label: "Turmas", icon: <BookOpen size={18} /> },
   { to: "/coordenacao/associacoes", label: "Atribuir Disciplinas", icon: <Users size={18} /> },
+  { to: "/coordenacao/horarios", label: "Horários", icon: <GraduationCap size={18} /> },
+  { to: "/coordenacao/avisos", label: "Avisos", icon: <Users size={18} /> },
   { to: "/coordenacao/usuarios", label: "Usuários", icon: <Shield size={18} /> },
 ];
 

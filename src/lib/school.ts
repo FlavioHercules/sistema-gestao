@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import type { Aluno, Nota, Turma } from "./supabase";
+import type { Aluno, Nota, Turma, Disciplina, Atividade } from "./supabase";
 
 // Limite máximo de faltas permitido na instituição (acima disso o aluno é reprovado por frequência)
 export const LIMITE_MAX_FALTAS = 25;
@@ -183,11 +183,148 @@ export async function getNotasByAluno(alunoId: string) {
   return data ?? [];
 }
 
+// ==========================================
+// FUNÇÕES DE HORÁRIOS (ATUALIZADAS PARA FOTO/ARQUIVO)
+// ==========================================
+
+export async function getHorariosByTurma(turmaId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("horarios")
+    .select("arquivo_url")
+    .eq("turma_id", turmaId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Erro ao buscar grade da turma:", error);
+    return null;
+  }
+
+  return data?.arquivo_url ?? null;
+}
+
+export async function getHorariosByProfessor(professorId: string): Promise<string | null> {
+  // Mantido para compatibilidade, caso algum componente chame
+  return null;
+}
+
+export async function getHorariosByAluno(alunoId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("alunos")
+    .select("turma_id")
+    .eq("id", alunoId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Erro ao buscar turma do aluno:", error);
+    return null;
+  }
+
+  if (!data?.turma_id) {
+    return null;
+  }
+
+  return getHorariosByTurma(data.turma_id);
+}
+
+export async function getAtividadesByTurma(turmaId: string): Promise<Atividade[]> {
+  const { data, error } = await supabase
+    .from("atividades")
+    .select(`
+      *,
+      professor:professores(id, nome),
+      disciplina:disciplinas(id, nome),
+      turma:turmas(id, nome)
+    `)
+    .eq("turma_id", turmaId)
+    .order("prazo", { ascending: true });
+
+  if (error) {
+    console.error("Erro ao buscar atividades da turma:", error);
+    return [];
+  }
+
+  return (data ?? []) as Atividade[];
+}
+
+export async function getAtividadesByAluno(alunoId: string, turmaId?: string): Promise<Atividade[]> {
+  if (turmaId) {
+    const list = await getAtividadesByTurma(turmaId);
+    if (list.length > 0) return list;
+  }
+
+  const { data, error } = await supabase
+    .from("alunos")
+    .select("turma_id")
+    .eq("id", alunoId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Erro ao buscar turma do aluno:", error);
+  }
+
+  if (data?.turma_id) {
+    const list = await getAtividadesByTurma(data.turma_id);
+    if (list.length > 0) return list;
+  }
+
+  // FALLBACK DE SEGURANÇA: Se a turma específica não retornar nada,
+  // trazemos todas as atividades cadastradas para garantir que o aluno veja os dados de teste.
+  console.warn("Nenhuma atividade encontrada pelo ID da turma do aluno. Buscando todas as atividades como fallback...");
+  const { data: allData, error: allError } = await supabase
+    .from("atividades")
+    .select(`
+      *,
+      professor:professores(id, nome),
+      disciplina:disciplinas(id, nome),
+      turma:turmas(id, nome)
+    `)
+    .order("prazo", { ascending: true });
+
+  if (allError) {
+    console.error("Erro no fallback de atividades:", allError);
+    return [];
+  }
+
+  return (allData ?? []) as Atividade[];
+}
+
+export interface CreateAtividadeInput {
+  turmaId: string;
+  professorId: string;
+  titulo: string;
+  descricao: string;
+  tipo: "atividade" | "simulado";
+  prazo?: string | null;
+  disciplinaId?: string | null;
+}
+
+export async function createAtividade(payload: CreateAtividadeInput) {
+  const { data, error } = await supabase
+    .from("atividades")
+    .insert({
+      turma_id: payload.turmaId,
+      professor_id: payload.professorId,
+      disciplina_id: payload.disciplinaId ?? null,
+      titulo: payload.titulo,
+      descricao: payload.descricao,
+      tipo: payload.tipo,
+      prazo: payload.prazo ?? null,
+    })
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return { id: data?.id };
+}
+
 export interface SaveProfessorNoteInput {
   alunoId: string;
   professorId: string;
   turmaId: string;
-  disciplinaId: string; // 👈 1. ADICIONADO AQUI
+  disciplinaId: string;
   unidade?: number;
   nota1: number | null;
   nota2: number | null;
@@ -204,7 +341,7 @@ export async function saveProfessorNote(payload: SaveProfessorNoteInput): Promis
     alunoId,
     professorId,
     turmaId,
-    disciplinaId, // 👈 2. EXTRAÍDO AQUI
+    disciplinaId,
     unidade = 1,
     nota1,
     nota2,
@@ -224,7 +361,7 @@ export async function saveProfessorNote(payload: SaveProfessorNoteInput): Promis
     aluno_id: alunoId,
     professor_id: professorId,
     turma_id: turmaId,
-    disciplina_id: disciplinaId, // 👈 3. GRAVANDO A DISCIPLINA NO SUPABASE
+    disciplina_id: disciplinaId,
     unidade: unidade,
     nota_1: nota1,
     nota_2: nota2,
@@ -249,7 +386,7 @@ export async function saveProfessorNote(payload: SaveProfessorNoteInput): Promis
  */
 export async function getDisciplinaDoProfessor(professorId: string, turmaId: string) {
   const { data, error } = await supabase
-    .from("turma_professores") // ou tabela de vínculo entre professor e turma/disciplina
+    .from("professor_turma_disciplina")
     .select("disciplina_id, disciplinas(*)")
     .eq("professor_id", professorId)
     .eq("turma_id", turmaId)

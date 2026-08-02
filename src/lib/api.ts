@@ -60,7 +60,7 @@ export interface CreateUserPayload {
   nome: string;
   email: string;
   senha: string;
-  tipo_usuario: "secretaria" | "professor" | "aluno";
+  tipo_usuario: "secretaria" | "coordenacao" | "professor" | "aluno";
   professor_id?: string | null;
   aluno_id?: string | null;
 }
@@ -173,27 +173,51 @@ export async function loadProfile(authId: string): Promise<{
     .maybeSingle();
 
   if (error) throw error;
-  if (!usuario) return { usuario: null, professor: null, aluno: null };
 
   let professor: Professor | null = null;
   let aluno: Aluno | null = null;
-  if (usuario.professor_id) {
-    const { data: prof } = await supabase
-      .from("professores")
-      .select("*")
-      .eq("id", usuario.professor_id)
-      .maybeSingle();
-    professor = prof as Professor | null;
+
+  if (usuario) {
+    if (usuario.professor_id) {
+      const { data: prof } = await supabase
+        .from("professores")
+        .select("*")
+        .eq("id", usuario.professor_id)
+        .maybeSingle();
+      professor = prof as Professor | null;
+    }
+
+    const alunoIdParaBuscar = usuario.aluno_id || (usuario.tipo_usuario === "aluno" ? usuario.id : null);
+
+    if (alunoIdParaBuscar) {
+      const { data: alunoData } = await supabase
+        .from("alunos")
+        .select("*, turma:turmas(*)")
+        .eq("id", alunoIdParaBuscar)
+        .maybeSingle();
+      aluno = alunoData as Aluno | null;
+    }
+
+    return { usuario: usuario as Usuario, professor, aluno };
   }
 
-  if (usuario.aluno_id) {
-    const { data: alunoData } = await supabase
-      .from("alunos")
-      .select("*, turma: turmas(*)")
-      .eq("id", usuario.aluno_id)
-      .maybeSingle();
-    aluno = alunoData as Aluno | null;
+  // Fallback caso o usuário logado seja diretamente um aluno sem registro prévio na tabela "usuarios"
+  const { data: alunoDireto } = await supabase
+    .from("alunos")
+    .select("*, turma:turmas(*)")
+    .eq("id", authId)
+    .maybeSingle();
+
+  if (alunoDireto) {
+    const usuarioAluno: Usuario = {
+      id: alunoDireto.id,
+      nome: alunoDireto.nome,
+      email: `${alunoDireto.matricula}@aluno.local`,
+      tipo_usuario: "aluno",
+      aluno_id: alunoDireto.id,
+    };
+    return { usuario: usuarioAluno, professor: null, aluno: alunoDireto as Aluno };
   }
 
-  return { usuario: usuario as Usuario, professor, aluno };
+  return { usuario: null, professor: null, aluno: null };
 }

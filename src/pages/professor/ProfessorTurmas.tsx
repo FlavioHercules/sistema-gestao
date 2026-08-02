@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { School, Users, ArrowRight, Loader2, ClipboardList, GraduationCap, TrendingUp } from "lucide-react";
+import { School, Users, ArrowRight, Loader2, ClipboardList, GraduationCap, TrendingUp, BookOpen } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../context/AuthContext";
 import type { Turma } from "../../lib/supabase";
@@ -13,6 +13,7 @@ const navItems = [
   { to: "/professor/turmas", label: "Minhas turmas", icon: <School size={18} /> },
   { to: "/professor/notas", label: "Notas", icon: <ClipboardList size={18} /> },
   { to: "/professor/boletim", label: "Boletins", icon: <GraduationCap size={18} /> },
+  { to: "/professor/atividades", label: "Atividades", icon: <BookOpen size={18} /> },
 ];
 
 type TurmaComAlunos = Turma & { aluno_count: number };
@@ -23,7 +24,8 @@ export function ProfessorTurmas() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!professor?.id) return;
+    const professorId = professor?.id;
+    if (!professorId) return;
 
     async function fetchTurmas() {
       setLoading(true);
@@ -32,7 +34,7 @@ export function ProfessorTurmas() {
         const { data: vinculos, error: vinculosErr } = await supabase
           .from("professor_turma_disciplina")
           .select("turmas (id, nome, ano_letivo, curso)")
-          .eq("professor_id", professor.id);
+          .eq("professor_id", professorId);
 
         if (vinculosErr) throw vinculosErr;
 

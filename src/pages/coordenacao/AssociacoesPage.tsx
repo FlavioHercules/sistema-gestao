@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { GraduationCap, BookOpen, Users, Plus, Trash2, Loader2, UserCheck, Shield } from "lucide-react";
+import { GraduationCap, BookOpen, Users, Plus, Trash2, Loader2, UserCheck, Shield, Layers } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import type { Professor, Turma, Disciplina } from "../../lib/supabase";
 import { AppLayout } from "../../components/layout/AppLayout";
@@ -16,6 +16,8 @@ const navItems = [
   { to: "/coordenacao/disciplinas", label: "Disciplinas", icon: <BookOpen size={18} /> },
   { to: "/coordenacao/turmas", label: "Turmas", icon: <BookOpen size={18} /> },
   { to: "/coordenacao/associacoes", label: "Atribuir Disciplinas", icon: <Users size={18} /> },
+  { to: "/coordenacao/horarios", label: "Horários", icon: <GraduationCap size={18} /> },
+  { to: "/coordenacao/avisos", label: "Avisos", icon: <Users size={18} /> },
   { to: "/coordenacao/usuarios", label: "Usuários", icon: <Shield size={18} /> },
 ];
 
@@ -190,7 +192,15 @@ export function CoordenacaoAssociacoesPage() {
               <Loader2 className="animate-spin" />
             </div>
           ) : (
-            <DataTable
+            <>
+              <div className="mb-4 rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+                <div className="flex items-center gap-2 text-sky-300">
+                  <Layers size={16} />
+                  <span className="text-sm font-semibold">Visão rápida dos vínculos</span>
+                </div>
+                <p className="mt-2 text-sm text-slate-400">Cada card representa um vínculo professor × turma × disciplina, facilitando a conferência e ajustes.</p>
+              </div>
+              <DataTable
               columns={[
                 {
                   key: "professor",
@@ -242,7 +252,8 @@ export function CoordenacaoAssociacoesPage() {
               data={associacoes}
               rowKey={(a) => a.id}
               emptyMessage="Nenhuma atribuição de disciplina cadastrada até o momento."
-            />
+              />
+            </>
           )}
         </CardContent>
       </Card>

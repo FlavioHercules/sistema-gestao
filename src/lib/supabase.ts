@@ -43,15 +43,50 @@ export interface Usuario {
 export interface Professor {
   id: string;
   nome: string;
-  disciplina: string;
+  disciplina?: string | null;
+  disciplina_principal?: string | null;
   usuario_id?: string | null;
   created_at?: string;
+}
+
+export interface Disciplina {
+  id: string;
+  nome: string;
+  carga_horaria?: number | null;
+  curso?: string | null;
+  created_at?: string;
+}
+
+export interface Horario {
+  id: string;
+  turma_id: string;
+  arquivo_url?: string | null; // Novo campo para a foto/documento da grade
+  created_at?: string;
+  updated_at?: string;
+  turma?: Turma;
+}
+
+export interface Atividade {
+  id: string;
+  turma_id: string;
+  professor_id: string;
+  disciplina_id?: string | null;
+  titulo: string;
+  descricao?: string | null;
+  tipo: "atividade" | "simulado";
+  prazo?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  professor?: Professor;
+  disciplina?: Disciplina;
+  turma?: Turma;
 }
 
 export interface Turma {
   id: string;
   nome: string;
   ano_letivo: number;
+  curso?: string | null;
   created_at?: string;
 }
 
@@ -83,6 +118,7 @@ export interface Nota {
   nota_2: number | null;
   nota_3: number | null;
   media: number | null;
+  observacao?: string | null;
   created_at?: string;
   updated_at?: string;
   aluno?: Aluno;

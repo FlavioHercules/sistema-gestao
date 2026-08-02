@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { ClipboardList, School, Loader2, Save, CheckCircle2, Edit2, Layers, TrendingUp, GraduationCap } from "lucide-react";
+import { ClipboardList, School, Loader2, Save, CheckCircle2, Edit2, Layers, TrendingUp, GraduationCap, BookOpen } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import type { Turma, Aluno, Nota } from "../../lib/supabase";
 import { calculateMedia, getAlunosByTurma, getNotasByProfessorAndTurma, saveProfessorNote } from "../../lib/school";
@@ -15,6 +15,7 @@ const navItems = [
   { to: "/professor/turmas", label: "Minhas turmas", icon: <School size={18} /> },
   { to: "/professor/notas", label: "Notas", icon: <ClipboardList size={18} /> },
   { to: "/professor/boletim", label: "Boletins", icon: <GraduationCap size={18} /> },
+  { to: "/professor/atividades", label: "Atividades", icon: <BookOpen size={18} /> },
 ];
 
 const UNIDADES = [

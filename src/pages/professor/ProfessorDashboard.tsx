@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { School, ClipboardList, TrendingUp, GraduationCap, ArrowRight } from "lucide-react";
+import { School, ClipboardList, TrendingUp, GraduationCap, ArrowRight, BookOpen, ImageIcon } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../context/AuthContext";
 import { AppLayout } from "../../components/layout/AppLayout";
@@ -14,6 +14,7 @@ const navItems = [
   { to: "/professor/turmas", label: "Minhas turmas", icon: <School size={18} /> },
   { to: "/professor/notas", label: "Notas", icon: <ClipboardList size={18} /> },
   { to: "/professor/boletim", label: "Boletins", icon: <GraduationCap size={18} /> },
+  { to: "/professor/atividades", label: "Atividades", icon: <BookOpen size={18} /> },
 ];
 
 interface TurmaInfo {
@@ -31,20 +32,19 @@ export function ProfessorDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!professor?.id) return;
+    const professorId = professor?.id;
+    if (!professorId) return;
 
     async function fetchDashboardData() {
       setLoading(true);
       try {
-        // 1. Busca as turmas vinculadas ao professor (via professor_turma_disciplina)
         const { data: vinculos, error: vinculosErr } = await supabase
           .from("professor_turma_disciplina")
           .select("turma_id, turmas (id, nome, ano_letivo)")
-          .eq("professor_id", professor.id);
+          .eq("professor_id", professorId);
 
         if (vinculosErr) throw vinculosErr;
 
-        // Remove turmas duplicadas e nulas (caso lecione mais de uma disciplina para a mesma turma)
         const turmasMap = new Map<string, { id: string; nome: string; ano_letivo: number }>();
         (vinculos ?? []).forEach((v: any) => {
           if (v.turmas && !turmasMap.has(v.turmas.id)) {
@@ -55,7 +55,6 @@ export function ProfessorDashboard() {
         const profTurmas = Array.from(turmasMap.values());
         const turmaIds = profTurmas.map((t) => t.id);
 
-        // 2. Busca contagem de alunos para cada turma em paralelo
         let totalAlunos = 0;
         const turmasComAlunos: TurmaInfo[] = await Promise.all(
           profTurmas.map(async (t) => {
@@ -72,7 +71,6 @@ export function ProfessorDashboard() {
 
         setTurmas(turmasComAlunos);
 
-        // 3. Busca as notas lançadas pelo professor
         if (turmaIds.length === 0) {
           setStats({ turmas: 0, alunos: 0, notas: 0, mediaGeral: 0 });
           setMediaPorTurma([]);
@@ -83,17 +81,15 @@ export function ProfessorDashboard() {
         const { data: notas, count: notasCount } = await supabase
           .from("notas")
           .select("media, turma_id", { count: "exact" })
-          .eq("professor_id", professor.id)
+          .eq("professor_id", professorId)
           .not("media", "is", null);
 
-        // Média Geral
         const arrayNotas = notas ?? [];
         const mediaGeral =
           arrayNotas.length > 0
             ? arrayNotas.reduce((acc, n) => acc + Number(n.media || 0), 0) / arrayNotas.length
             : 0;
 
-        // Média por Turma
         const agrupamentoPorTurma = new Map<string, { soma: number; count: number }>();
 
         for (const n of arrayNotas) {
@@ -114,7 +110,6 @@ export function ProfessorDashboard() {
 
         setMediaPorTurma(barrasGrafico);
 
-        // Atualiza os cards estáticos
         setStats({
           turmas: profTurmas.length,
           alunos: totalAlunos,
@@ -149,6 +144,33 @@ export function ProfessorDashboard() {
           accent="violet"
           hint="Média das suas notas lançadas"
         />
+      </div>
+
+      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-1">
+        {/* Card Informativo com Atalho para Visualizar Grades por Foto enviadas pela Coordenação */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Mural de Grades Oficiais</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 text-sm text-slate-300">
+            <p className="text-slate-400">
+              Utilize o painel de turmas para verificar comunicados e fotos de grades enviadas pela coordenação.
+            </p>
+            <div className="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900/60 p-3">
+              <ImageIcon size={20} className="text-sky-400 shrink-0" />
+              <div className="text-xs">
+                <p className="font-medium text-white">Fotos e Documentos de Horários</p>
+                <p className="text-slate-400">As imagens oficiais anexadas pela coordenação ficam disponíveis para consulta rápida.</p>
+              </div>
+            </div>
+            <Link
+              to="/professor/turmas"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-xs font-medium text-white transition hover:bg-sky-500"
+            >
+              Ver minhas turmas e detalhes <ArrowRight size={14} />
+            </Link>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">

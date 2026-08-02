@@ -23,18 +23,14 @@ export function ProtectedRoute({ roles, children }: ProtectedRouteProps) {
   if (!usuario) return <Navigate to="/login" replace />;
 
   if (!roles.includes(usuario.tipo_usuario)) {
-    return (
-      <Navigate
-        to={
-          usuario.tipo_usuario === "secretaria"
-            ? "/secretaria"
-            : usuario.tipo_usuario === "aluno"
-              ? "/aluno"
-              : "/professor"
-        }
-        replace
-      />
-    );
+    const redirectPath: Record<string, string> = {
+      secretaria: "/secretaria",
+      aluno: "/aluno",
+      professor: "/professor",
+      coordenacao: "/coordenacao",
+    };
+
+    return <Navigate to={redirectPath[usuario.tipo_usuario] ?? "/login"} replace />;
   }
 
   return <>{children}</>;

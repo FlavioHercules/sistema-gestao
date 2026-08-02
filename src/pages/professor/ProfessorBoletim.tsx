@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { GraduationCap, School, Loader2, Printer, Award, AlertCircle, ClipboardList, TrendingUp } from "lucide-react";
+import { GraduationCap, School, Loader2, Printer, Award, AlertCircle, ClipboardList, TrendingUp, BookOpen } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../context/AuthContext";
 import type { Turma, Aluno, Nota } from "../../lib/supabase";
@@ -16,6 +16,7 @@ const navItems = [
   { to: "/professor/turmas", label: "Minhas turmas", icon: <School size={18} /> },
   { to: "/professor/notas", label: "Notas", icon: <ClipboardList size={18} /> },
   { to: "/professor/boletim", label: "Boletins", icon: <GraduationCap size={18} /> },
+  { to: "/professor/atividades", label: "Atividades", icon: <BookOpen size={18} /> },
 ];
 
 type SituacaoAluno = "Aprovado" | "Recuperação" | "Reprovado" | "Reprovado por Faltas" | "Sem notas";

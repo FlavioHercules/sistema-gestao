@@ -11,19 +11,25 @@ import { ListaTurmas } from "./pages/secretaria/ListaTurmas";
 // Páginas da Coordenação
 import { CoordenacaoDashboardPage } from "./pages/coordenacao/DashboardPage";
 import { CoordenacaoProfessoresPage } from "./pages/coordenacao/ProfessoresPage";
-import { CoordenacaoDisciplinasPage } from "./pages/coordenacao/DisciplinasPage"; // <-- ADICIONADO AQUI
+import { CoordenacaoDisciplinasPage } from "./pages/coordenacao/DisciplinasPage";
 import { CoordenacaoTurmasPage } from "./pages/coordenacao/TurmasPage";
 import { CoordenacaoAssociacoesPage } from "./pages/coordenacao/AssociacoesPage";
 import { UsuariosPage } from "./pages/coordenacao/UsuariosPage";
+import { CoordenacaoHorariosPage } from "./pages/coordenacao/HorariosPage";
+import { CoordenacaoAvisosPage } from "./pages/coordenacao/AvisosPage";
 
 // Páginas do Professor
 import { ProfessorDashboard } from "./pages/professor/ProfessorDashboard";
 import { ProfessorTurmas } from "./pages/professor/ProfessorTurmas";
 import { ProfessorNotas } from "./pages/professor/ProfessorNotas";
 import { ProfessorBoletim } from "./pages/professor/ProfessorBoletim";
+import { ProfessorAtividades } from "./pages/professor/ProfessorAtividades";
 
-// Páginas do Aluno
+// Páginas do Aluno (Corrigido com alias para manter a compatibilidade da tag <AlunoHorarios />)
+import { AlunoHorariosPage as AlunoHorarios } from "./pages/aluno/AlunoHorarios";
 import { AlunoDashboard } from "./pages/aluno/AlunoDashboard";
+import { AlunoBoletim } from "./pages/aluno/AlunoBoletim";
+import { AlunoAtividades } from "./pages/aluno/AlunoAtividades";
 
 export default function App() {
   return (
@@ -75,8 +81,6 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-
-          {/* ROTA DE DISCIPLINAS ADICIONADA AQUI */}
           <Route
             path="/coordenacao/disciplinas"
             element={
@@ -85,7 +89,6 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/coordenacao/turmas"
             element={
@@ -107,6 +110,22 @@ export default function App() {
             element={
               <ProtectedRoute roles={["coordenacao", "secretaria"]}>
                 <UsuariosPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/coordenacao/horarios"
+            element={
+              <ProtectedRoute roles={["coordenacao", "secretaria"]}>
+                <CoordenacaoHorariosPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/coordenacao/avisos"
+            element={
+              <ProtectedRoute roles={["coordenacao", "secretaria"]}>
+                <CoordenacaoAvisosPage />
               </ProtectedRoute>
             }
           />
@@ -144,6 +163,14 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/professor/atividades"
+            element={
+              <ProtectedRoute roles={["professor"]}>
+                <ProfessorAtividades />
+              </ProtectedRoute>
+            }
+          />
 
           {/* ROTAS DO ALUNO */}
           <Route
@@ -151,6 +178,30 @@ export default function App() {
             element={
               <ProtectedRoute roles={["aluno"]}>
                 <AlunoDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/aluno/boletim"
+            element={
+              <ProtectedRoute roles={["aluno"]}>
+                <AlunoBoletim />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/aluno/horarios"
+            element={
+              <ProtectedRoute roles={["aluno"]}>
+                <AlunoHorarios />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/aluno/atividades"
+            element={
+              <ProtectedRoute roles={["aluno"]}>
+                <AlunoAtividades />
               </ProtectedRoute>
             }
           />

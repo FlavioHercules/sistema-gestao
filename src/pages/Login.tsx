@@ -79,7 +79,7 @@ export function Login() {
       // 1. Busca os alunos da turma selecionada
       const { data: alunosDaTurma, error: alunoErr } = await supabase
         .from("alunos")
-        .select("*")
+        .select("*, turma: turmas(*)")
         .eq("turma_id", turmaId);
 
       if (alunoErr) {
