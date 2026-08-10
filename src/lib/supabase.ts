@@ -1,8 +1,14 @@
 import { createClient } from "@supabase/supabase-js";
 
-// Busca das variáveis do Vite
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
+// ============================================================
+// SUPABASE CLIENT
+// ============================================================
+
+const supabaseUrl =
+  import.meta.env.VITE_SUPABASE_URL || "";
+
+const supabaseAnonKey =
+  import.meta.env.VITE_SUPABASE_ANON_KEY || "";
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error(
@@ -11,7 +17,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export const supabase = createClient(
-  supabaseUrl || "https://placeholder.supabase.co", // evita o crash fatal no import
+  supabaseUrl || "https://placeholder.supabase.co",
   supabaseAnonKey || "placeholder-key",
   {
     auth: {
@@ -22,113 +28,262 @@ export const supabase = createClient(
   }
 );
 
-// ----- Domain types matching the database schema -----
-// (Seus tipos continuam iguais aqui abaixo...)
+// ============================================================
+// TIPOS DE USUÁRIO
+// ============================================================
 
-// ----- Domain types matching the database schema -----
+export type TipoUsuario =
+  | "secretaria"
+  | "coordenacao"
+  | "professor"
+  | "aluno";
 
-// Atualize a union de TipoUsuario para incluir a coordenação:
-export type TipoUsuario = "secretaria" | "coordenacao" | "professor" | "aluno";
+// ============================================================
+// USUÁRIO
+// ============================================================
 
 export interface Usuario {
   id: string;
   nome: string;
   email: string;
   tipo_usuario: TipoUsuario;
+
+  /**
+   * ID do registro do professor em professores_oficial.
+   */
   professor_id?: string | null;
+
+  /**
+   * ID do registro do aluno.
+   */
   aluno_id?: string | null;
+
   created_at?: string;
+  updated_at?: string;
 }
+
+// ============================================================
+// PROFESSOR
+// ============================================================
+//
+// ATENÇÃO:
+// A tabela oficial agora é:
+//
+// professores_oficial
+//
+// O campo usuario_id faz a ligação com a tabela usuarios.
+//
+// Não utilizar mais a tabela "professores" para novos cadastros.
+//
 
 export interface Professor {
   id: string;
   nome: string;
-  disciplina?: string | null;
-  disciplina_principal?: string | null;
+
+  email?: string | null;
+
+  area_formacao?: string | null;
+
+  /**
+   * ID do usuário responsável pelo login.
+   */
   usuario_id?: string | null;
+
   created_at?: string;
+  updated_at?: string;
 }
+
+// Alias explícito para deixar claro qual tabela representa
+// o professor oficial no sistema.
+export type ProfessorOficial = Professor;
+
+// ============================================================
+// DISCIPLINA
+// ============================================================
 
 export interface Disciplina {
   id: string;
   nome: string;
+
   carga_horaria?: number | null;
+
   curso?: string | null;
-  created_at?: string;
-}
 
-export interface Horario {
-  id: string;
-  turma_id: string;
-  arquivo_url?: string | null; // Novo campo para a foto/documento da grade
   created_at?: string;
   updated_at?: string;
-  turma?: Turma;
 }
 
-export interface Atividade {
-  id: string;
-  turma_id: string;
-  professor_id: string;
-  disciplina_id?: string | null;
-  titulo: string;
-  descricao?: string | null;
-  tipo: "atividade" | "simulado";
-  prazo?: string | null;
-  created_at?: string;
-  updated_at?: string;
-  professor?: Professor;
-  disciplina?: Disciplina;
-  turma?: Turma;
-}
+// ============================================================
+// TURMA
+// ============================================================
 
 export interface Turma {
   id: string;
   nome: string;
+
   ano_letivo: number;
+
   curso?: string | null;
+
   created_at?: string;
+  updated_at?: string;
 }
+
+// ============================================================
+// TURMA + PROFESSOR
+// ============================================================
+//
+// Relacionamento entre professores_oficial e turmas.
+//
 
 export interface TurmaProfessor {
   turma_id: string;
   professor_id: string;
+
   turma?: Turma;
+
   professor?: Professor;
 }
+
+// ============================================================
+// HORÁRIO
+// ============================================================
+
+export interface Horario {
+  id: string;
+
+  turma_id: string;
+
+  arquivo_url?: string | null;
+
+  created_at?: string;
+
+  updated_at?: string;
+
+  turma?: Turma;
+}
+
+// ============================================================
+// ALUNO
+// ============================================================
 
 export interface Aluno {
   id: string;
+
   nome: string;
+
   matricula: string;
+
   turma_id: string | null;
+
   usuario_id?: string | null;
+
   data_nascimento?: string | null;
+
   observacao?: string | null;
+
   turma?: Turma | null;
+
   created_at?: string;
+
+  updated_at?: string;
 }
+
+// ============================================================
+// ATIVIDADE
+// ============================================================
+
+export interface Atividade {
+  id: string;
+
+  turma_id: string;
+
+  /**
+   * ID do professor em professores_oficial.
+   */
+  professor_id: string;
+
+  disciplina_id?: string | null;
+
+  titulo: string;
+
+  descricao?: string | null;
+
+  tipo: "atividade" | "simulado";
+
+  prazo?: string | null;
+
+  created_at?: string;
+
+  updated_at?: string;
+
+  professor?: Professor | null;
+
+  disciplina?: Disciplina | null;
+
+  turma?: Turma | null;
+}
+
+// ============================================================
+// NOTA
+// ============================================================
 
 export interface Nota {
   id: string;
+
   aluno_id: string;
+
+  /**
+   * ID do professor em professores_oficial.
+   */
   professor_id: string;
+
   turma_id: string | null;
+
+  disciplina_id?: string | null;
+
+  unidade?: number;
+
   nota_1: number | null;
+
   nota_2: number | null;
+
   nota_3: number | null;
+
   media: number | null;
+
   observacao?: string | null;
-  created_at?: string;
-  updated_at?: string;
-  aluno?: Aluno;
-  professor?: Professor;
-  turma?: Turma | null;
+
   faltas?: number | null;
+
+  created_at?: string;
+
+  updated_at?: string;
+
+  aluno?: Aluno;
+
+  professor?: Professor | null;
+
+  turma?: Turma | null;
+
+  disciplina?: Disciplina | null;
 }
+
+// ============================================================
+// SESSÃO DA APLICAÇÃO
+// ============================================================
 
 export interface AuthSession {
   user: Usuario | null;
+
+  /**
+   * Perfil pedagógico do professor.
+   *
+   * Agora vem de professores_oficial.
+   */
   professor: Professor | null;
+
+  aluno: Aluno | null;
+
   loading: boolean;
 }

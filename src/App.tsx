@@ -3,12 +3,16 @@ import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { Login } from "./pages/Login";
 
-// Páginas da Secretaria
+// =========================
+// PÁGINAS DA SECRETARIA
+// =========================
 import { SecretariaDashboard } from "./pages/secretaria/SecretariaDashboard";
 import { AlunosPage } from "./pages/secretaria/AlunosPage";
 import { ListaTurmas } from "./pages/secretaria/ListaTurmas";
 
-// Páginas da Coordenação
+// =========================
+// PÁGINAS DA COORDENAÇÃO
+// =========================
 import { CoordenacaoDashboardPage } from "./pages/coordenacao/DashboardPage";
 import { CoordenacaoProfessoresPage } from "./pages/coordenacao/ProfessoresPage";
 import { CoordenacaoDisciplinasPage } from "./pages/coordenacao/DisciplinasPage";
@@ -18,14 +22,26 @@ import { UsuariosPage } from "./pages/coordenacao/UsuariosPage";
 import { CoordenacaoHorariosPage } from "./pages/coordenacao/HorariosPage";
 import { CoordenacaoAvisosPage } from "./pages/coordenacao/AvisosPage";
 
-// Páginas do Professor
+// IMPORTANTE:
+// ReservasEspacosPage está sendo importado como DEFAULT
+import CoordenacaoReservasEspacosPage from "./pages/coordenacao/ReservasEspacosPage";
+
+// =========================
+// PÁGINAS DO PROFESSOR
+// =========================
 import { ProfessorDashboard } from "./pages/professor/ProfessorDashboard";
 import { ProfessorTurmas } from "./pages/professor/ProfessorTurmas";
 import { ProfessorNotas } from "./pages/professor/ProfessorNotas";
 import { ProfessorBoletim } from "./pages/professor/ProfessorBoletim";
 import { ProfessorAtividades } from "./pages/professor/ProfessorAtividades";
 
-// Páginas do Aluno (Corrigido com alias para manter a compatibilidade da tag <AlunoHorarios />)
+// IMPORTANTE:
+// ReservasEspacosPage está sendo importado como DEFAULT
+import ProfessorReservasEspacosPage from "./pages/professor/ReservasEspacosPage";
+
+// =========================
+// PÁGINAS DO ALUNO
+// =========================
 import { AlunoHorariosPage as AlunoHorarios } from "./pages/aluno/AlunoHorarios";
 import { AlunoDashboard } from "./pages/aluno/AlunoDashboard";
 import { AlunoBoletim } from "./pages/aluno/AlunoBoletim";
@@ -36,9 +52,19 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/login" element={<Login />} />
 
-          {/* ROTAS DA SECRETARIA */}
+          {/* =========================
+              LOGIN
+          ========================= */}
+          <Route
+            path="/login"
+            element={<Login />}
+          />
+
+          {/* =========================
+              ROTAS DA SECRETARIA
+          ========================= */}
+
           <Route
             path="/secretaria"
             element={
@@ -47,6 +73,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/secretaria/alunos"
             element={
@@ -55,6 +82,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/secretaria/turmas"
             element={
@@ -64,7 +92,10 @@ export default function App() {
             }
           />
 
-          {/* ROTAS DA COORDENAÇÃO */}
+          {/* =========================
+              ROTAS DA COORDENAÇÃO
+          ========================= */}
+
           <Route
             path="/coordenacao"
             element={
@@ -73,6 +104,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/coordenacao/professores"
             element={
@@ -81,6 +113,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/coordenacao/disciplinas"
             element={
@@ -89,6 +122,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/coordenacao/turmas"
             element={
@@ -97,6 +131,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/coordenacao/associacoes"
             element={
@@ -105,6 +140,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/coordenacao/usuarios"
             element={
@@ -113,6 +149,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/coordenacao/horarios"
             element={
@@ -121,6 +158,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/coordenacao/avisos"
             element={
@@ -130,7 +168,23 @@ export default function App() {
             }
           />
 
-          {/* ROTAS DO PROFESSOR */}
+          {/* =========================
+              RESERVAS - COORDENAÇÃO
+          ========================= */}
+
+          <Route
+            path="/coordenacao/reservas"
+            element={
+              <ProtectedRoute roles={["coordenacao", "secretaria"]}>
+                <CoordenacaoReservasEspacosPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* =========================
+              ROTAS DO PROFESSOR
+          ========================= */}
+
           <Route
             path="/professor"
             element={
@@ -139,6 +193,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/professor/turmas"
             element={
@@ -147,6 +202,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/professor/notas"
             element={
@@ -155,6 +211,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/professor/boletim"
             element={
@@ -163,6 +220,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/professor/atividades"
             element={
@@ -172,7 +230,23 @@ export default function App() {
             }
           />
 
-          {/* ROTAS DO ALUNO */}
+          {/* =========================
+              RESERVAS - PROFESSOR
+          ========================= */}
+
+          <Route
+            path="/professor/reservas"
+            element={
+              <ProtectedRoute roles={["professor"]}>
+                <ProfessorReservasEspacosPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* =========================
+              ROTAS DO ALUNO
+          ========================= */}
+
           <Route
             path="/aluno"
             element={
@@ -181,6 +255,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/aluno/boletim"
             element={
@@ -189,6 +264,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/aluno/horarios"
             element={
@@ -197,6 +273,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/aluno/atividades"
             element={
@@ -206,8 +283,15 @@ export default function App() {
             }
           />
 
-          {/* Rota padrão */}
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          {/* =========================
+              ROTA PADRÃO
+          ========================= */}
+
+          <Route
+            path="*"
+            element={<Navigate to="/login" replace />}
+          />
+
         </Routes>
       </BrowserRouter>
     </AuthProvider>

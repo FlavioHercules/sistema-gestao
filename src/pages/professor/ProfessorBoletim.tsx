@@ -1,25 +1,72 @@
-import { useEffect, useState, useMemo } from "react";
+
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { GraduationCap, School, Loader2, Printer, Award, AlertCircle, ClipboardList, TrendingUp, BookOpen } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import {
+  GraduationCap,
+  School,
+  Loader2,
+  Printer,
+  ClipboardList,
+  BookOpen,
+  ImageIcon,
+} from "lucide-react";
+
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../context/AuthContext";
 import type { Turma, Aluno, Nota } from "../../lib/supabase";
 import { calculateMedia } from "../../lib/school";
-import { AppLayout } from "../../components/layout/AppLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
-import { StatBadge } from "../../components/ui/Misc";
-import { BarChart } from "../../components/ui/Charts";
-import { PageHeader } from "../../components/ui/Misc";
 
-const navItems = [
-  { to: "/professor", label: "Dashboard", icon: <TrendingUp size={18} /> },
-  { to: "/professor/turmas", label: "Minhas turmas", icon: <School size={18} /> },
-  { to: "/professor/notas", label: "Notas", icon: <ClipboardList size={18} /> },
-  { to: "/professor/boletim", label: "Boletins", icon: <GraduationCap size={18} /> },
-  { to: "/professor/atividades", label: "Atividades", icon: <BookOpen size={18} /> },
+import { AppLayout } from "../../components/layout/AppLayout";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../components/ui/Card";
+import { StatBadge, PageHeader } from "../../components/ui/Misc";
+import { BarChart } from "../../components/ui/Charts";
+
+interface NavItem {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+}
+
+const navItems: NavItem[] = [
+  {
+    to: "/professor",
+    label: "Dashboard",
+    icon: School,
+  },
+  {
+    to: "/professor/turmas",
+    label: "Minhas turmas",
+    icon: GraduationCap,
+  },
+  {
+    to: "/professor/notas",
+    label: "Notas",
+    icon: ClipboardList,
+  },
+  {
+    to: "/professor/boletim",
+    label: "Boletins",
+    icon: BookOpen,
+  },
+  {
+    to: "/professor/atividades",
+    label: "Atividades",
+    icon: ImageIcon,
+  },
 ];
 
-type SituacaoAluno = "Aprovado" | "Recuperação" | "Reprovado" | "Reprovado por Faltas" | "Sem notas";
+type SituacaoAluno =
+  | "Aprovado"
+  | "Recuperação"
+  | "Reprovado"
+  | "Reprovado por Faltas"
+  | "Sem notas";
 
 interface BoletimAluno {
   aluno: Aluno;
@@ -29,50 +76,105 @@ interface BoletimAluno {
   situacao: SituacaoAluno;
 }
 
+interface VinculoTurma {
+  turmas:
+    | {
+        id: string;
+        nome: string;
+        ano_letivo: number;
+        curso?: string | null;
+      }
+    | null;
+}
+
 export function ProfessorBoletim() {
   const { professor } = useAuth();
+
   const [params, setParams] = useSearchParams();
+
   const [turmas, setTurmas] = useState<Turma[]>([]);
   const [boletim, setBoletim] = useState<BoletimAluno[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   const selectedTurma = params.get("turma") ?? "";
   const selectedUnidade = params.get("unidade") ?? "1";
 
-  // 1. Carrega as turmas atribuídas ao professor
+  /*
+   * ============================================================
+   * CARREGAR TURMAS DO PROFESSOR
+   * ============================================================
+   */
   useEffect(() => {
-    if (!professor?.id) return;
+    if (!professor?.id) {
+      setTurmas([]);
+      setLoading(false);
+      return;
+    }
 
-    (async () => {
+    async function fetchTurmas() {
       try {
         const { data: vinculos, error } = await supabase
           .from("professor_turma_disciplina")
-          .select("turmas (id, nome, ano_letivo, curso)")
+          .select(`
+            turmas (
+              id,
+              nome,
+              ano_letivo,
+              curso
+            )
+          `)
           .eq("professor_id", professor.id);
 
-        if (error) throw error;
+        if (error) {
+          throw error;
+        }
 
         const turmasMap = new Map<string, Turma>();
-        (vinculos ?? []).forEach((v: any) => {
-          if (v.turmas && !turmasMap.has(v.turmas.id)) {
-            turmasMap.set(v.turmas.id, v.turmas as Turma);
+
+        (vinculos as VinculoTurma[] | null)?.forEach((vinculo) => {
+          const turma = vinculo.turmas;
+
+          if (turma && !turmasMap.has(turma.id)) {
+            turmasMap.set(turma.id, turma as Turma);
           }
         });
 
         const profTurmas = Array.from(turmasMap.values());
+
         setTurmas(profTurmas);
 
-        if (profTurmas.length > 0 && (!selectedTurma || !profTurmas.some((t) => t.id === selectedTurma))) {
-          setParams({ turma: profTurmas[0].id, unidade: selectedUnidade }, { replace: true });
+        /*
+         * Se não existe turma selecionada, seleciona a primeira.
+         * Se a turma selecionada não pertence ao professor,
+         * também volta para a primeira turma disponível.
+         */
+        const turmaSelecionadaValida = profTurmas.some(
+          (turma) => turma.id === selectedTurma
+        );
+
+        if (profTurmas.length > 0 && !turmaSelecionadaValida) {
+          setParams(
+            {
+              turma: profTurmas[0].id,
+              unidade: selectedUnidade,
+            },
+            { replace: true }
+          );
         }
-      } catch (err) {
-        console.error("Erro ao carregar turmas:", err);
+      } catch (error) {
+        console.error("Erro ao carregar turmas do professor:", error);
         setTurmas([]);
       }
-    })();
+    }
+
+    fetchTurmas();
   }, [professor?.id]);
 
-  // 2. Carrega alunos e notas da turma selecionada
+  /*
+   * ============================================================
+   * CARREGAR ALUNOS E NOTAS
+   * ============================================================
+   */
   useEffect(() => {
     if (!professor?.id || !selectedTurma) {
       setBoletim([]);
@@ -80,40 +182,74 @@ export function ProfessorBoletim() {
       return;
     }
 
-    (async () => {
+    async function fetchBoletim() {
       setLoading(true);
+
       try {
-        // Alunos da turma
-        const { data: aluData } = await supabase
+        /*
+         * Buscar alunos da turma
+         */
+        const {
+          data: alunosData,
+          error: alunosError,
+        } = await supabase
           .from("alunos")
           .select("*")
           .eq("turma_id", selectedTurma)
           .order("nome", { ascending: true });
-        
-        const alunosList = (aluData ?? []) as Aluno[];
 
-        // Notas lançadas pelo professor para esta turma
-        const { data: notasData } = await supabase
+        if (alunosError) {
+          throw alunosError;
+        }
+
+        const alunosList = (alunosData ?? []) as Aluno[];
+
+        /*
+         * Buscar notas do professor nessa turma
+         */
+        const {
+          data: notasData,
+          error: notasError,
+        } = await supabase
           .from("notas")
           .select("*")
           .eq("professor_id", professor.id)
           .eq("turma_id", selectedTurma);
 
-        const notasList = (notasData ?? []) as Nota[];
-        const notaByAluno = new Map<string, Nota>();
-        for (const n of notasList) notaByAluno.set(n.aluno_id, n);
+        if (notasError) {
+          throw notasError;
+        }
 
-        const result: BoletimAluno[] = alunosList.map((a) => {
-          const nota = notaByAluno.get(a.id) ?? null;
+        const notasList = (notasData ?? []) as Nota[];
+
+        /*
+         * Organizar notas por aluno
+         */
+        const notaByAluno = new Map<string, Nota>();
+
+        for (const nota of notasList) {
+          notaByAluno.set(nota.aluno_id, nota);
+        }
+
+        /*
+         * Montar boletim
+         */
+        const result: BoletimAluno[] = alunosList.map((aluno) => {
+          const nota = notaByAluno.get(aluno.id) ?? null;
+
           const media = calculateMedia([
             nota?.nota_1 ?? null,
             nota?.nota_2 ?? null,
-            nota?.nota_3 ?? null
+            nota?.nota_3 ?? null,
           ]);
-          const faltas = nota?.faltas ?? 0;
+
+          const faltas = Number(nota?.faltas ?? 0);
 
           let situacao: SituacaoAluno = "Sem notas";
 
+          /*
+           * Regra de frequência
+           */
           if (faltas > 25) {
             situacao = "Reprovado por Faltas";
           } else if (media !== null) {
@@ -126,151 +262,290 @@ export function ProfessorBoletim() {
             }
           }
 
-          return { aluno: a, nota, media, faltas, situacao };
+          return {
+            aluno,
+            nota,
+            media,
+            faltas,
+            situacao,
+          };
         });
 
         setBoletim(result);
-      } catch (err) {
-        console.error("Erro ao buscar dados do boletim:", err);
+      } catch (error) {
+        console.error(
+          "Erro ao carregar dados do boletim:",
+          error
+        );
+
+        setBoletim([]);
       } finally {
         setLoading(false);
       }
-    })();
+    }
+
+    fetchBoletim();
   }, [professor?.id, selectedTurma]);
 
+  /*
+   * ============================================================
+   * TURMA ATUAL
+   * ============================================================
+   */
   const currentTurma = useMemo(
-    () => turmas.find((t) => t.id === selectedTurma),
+    () => turmas.find((turma) => turma.id === selectedTurma),
     [turmas, selectedTurma]
   );
 
+  /*
+   * ============================================================
+   * RESUMO
+   * ============================================================
+   */
   const resumo = useMemo(() => {
-    const aprov = boletim.filter((b) => b.situacao === "Aprovado").length;
-    const rec = boletim.filter((b) => b.situacao === "Recuperação").length;
-    const reprov = boletim.filter((b) => b.situacao === "Reprovado" || b.situacao === "Reprovado por Faltas").length;
-    const semNotas = boletim.filter((b) => b.situacao === "Sem notas").length;
-    return { aprov, rec, reprov, semNotas };
+    const aprov = boletim.filter(
+      (aluno) => aluno.situacao === "Aprovado"
+    ).length;
+
+    const rec = boletim.filter(
+      (aluno) => aluno.situacao === "Recuperação"
+    ).length;
+
+    const reprov = boletim.filter(
+      (aluno) =>
+        aluno.situacao === "Reprovado" ||
+        aluno.situacao === "Reprovado por Faltas"
+    ).length;
+
+    const semNotas = boletim.filter(
+      (aluno) => aluno.situacao === "Sem notas"
+    ).length;
+
+    return {
+      aprov,
+      rec,
+      reprov,
+      semNotas,
+    };
   }, [boletim]);
 
+  /*
+   * ============================================================
+   * DADOS DO GRÁFICO
+   * ============================================================
+   */
   const chartData = useMemo(
     () =>
       boletim
-        .filter((b) => b.media !== null)
-        .map((b) => ({
-          label: b.aluno.nome.split(" ")[0],
-          value: b.media as number,
+        .filter((aluno) => aluno.media !== null)
+        .map((aluno) => ({
+          label: aluno.aluno.nome.split(" ")[0],
+          value: Number(aluno.media),
           max: 10,
         })),
     [boletim]
   );
 
-  function situacaoBadge(s: SituacaoAluno) {
-    if (s === "Aprovado") {
-      return (
-        <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-300">
-          <Award size={11} /> Aprovado
-        </span>
-      );
+  /*
+   * ============================================================
+   * BADGE DA SITUAÇÃO
+   * ============================================================
+   */
+  function situacaoBadge(situacao: SituacaoAluno) {
+    switch (situacao) {
+      case "Aprovado":
+        return (
+          <span className="inline-flex items-center rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-300">
+            Aprovado
+          </span>
+        );
+
+      case "Recuperação":
+        return (
+          <span className="inline-flex items-center rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-300">
+            Recuperação
+          </span>
+        );
+
+      case "Reprovado por Faltas":
+        return (
+          <span className="inline-flex items-center rounded-full border border-rose-500/20 bg-rose-500/10 px-2.5 py-1 text-xs font-medium text-rose-300">
+            Reprovado (Faltas)
+          </span>
+        );
+
+      case "Reprovado":
+        return (
+          <span className="inline-flex items-center rounded-full border border-rose-500/20 bg-rose-500/10 px-2.5 py-1 text-xs font-medium text-rose-300">
+            Reprovado
+          </span>
+        );
+
+      default:
+        return (
+          <span className="inline-flex items-center rounded-full border border-slate-700 bg-slate-800/70 px-2.5 py-1 text-xs font-medium text-slate-400">
+            Sem notas
+          </span>
+        );
     }
-    if (s === "Recuperação") {
-      return (
-        <span className="rounded-md bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-300">
-          Recuperação
-        </span>
-      );
-    }
-    if (s === "Reprovado por Faltas") {
-      return (
-        <span className="inline-flex items-center gap-1 rounded-md bg-rose-500/15 px-2 py-0.5 text-xs font-semibold text-rose-400">
-          <AlertCircle size={11} /> Reprovado (Faltas)
-        </span>
-      );
-    }
-    if (s === "Reprovado") {
-      return (
-        <span className="rounded-md bg-rose-500/15 px-2 py-0.5 text-xs font-semibold text-rose-300">
-          Reprovado
-        </span>
-      );
-    }
-    return (
-      <span className="rounded-md bg-slate-700/60 px-2 py-0.5 text-xs font-medium text-slate-400">
-        Sem notas
-      </span>
-    );
   }
 
   return (
-    <AppLayout navItems={navItems} brandLabel="EduGrade" brandSub="Área do Professor">
+    <AppLayout
+      navItems={navItems}
+      brandLabel="EduGrade"
+      brandSub="Área do Professor"
+    >
       <PageHeader
         title="Boletins"
         description="Visualize o desempenho e a frequência dos alunos por turma."
         action={
           <button
+            type="button"
             onClick={() => window.print()}
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800/40 px-3.5 py-2 text-sm font-medium text-slate-200 hover:bg-slate-800/70 transition-colors"
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800/40 px-3.5 py-2 text-sm font-medium text-slate-200 transition-colors hover:bg-slate-800/70"
           >
-            <Printer size={15} /> Imprimir
+            <Printer size={16} />
+            Imprimir
           </button>
         }
       />
 
-      {/* Seleção de Turma */}
-      <div className="mb-5 flex flex-wrap gap-2">
-        {turmas.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setParams({ turma: t.id, unidade: selectedUnidade })}
-            className={`inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-medium transition-all ${
-              selectedTurma === t.id
-                ? "border-sky-500/50 bg-sky-500/15 text-sky-300"
-                : "border-slate-800 bg-slate-900/60 text-slate-300 hover:border-slate-700 hover:bg-slate-800/60"
-            }`}
-          >
-            <School size={14} />
-            {t.nome}
-          </button>
-        ))}
-      </div>
-
-      {loading ? (
-        <div className="flex items-center justify-center py-16 text-slate-500">
-          <Loader2 className="animate-spin" />
+      {/* ======================================================
+          SELEÇÃO DE TURMA
+          ====================================================== */}
+      {turmas.length > 0 && (
+        <div className="mb-5 flex flex-wrap gap-2">
+          {turmas.map((turma) => (
+            <button
+              key={turma.id}
+              type="button"
+              onClick={() =>
+                setParams({
+                  turma: turma.id,
+                  unidade: selectedUnidade,
+                })
+              }
+              className={`inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-medium transition-all ${
+                selectedTurma === turma.id
+                  ? "border-sky-500/50 bg-sky-500/15 text-sky-300"
+                  : "border-slate-800 bg-slate-900/60 text-slate-300 hover:border-slate-700 hover:bg-slate-800/60"
+              }`}
+            >
+              <School size={14} />
+              {turma.nome}
+            </button>
+          ))}
         </div>
-      ) : boletim.length === 0 ? (
+      )}
+
+      {/* ======================================================
+          SEM TURMAS
+          ====================================================== */}
+      {!loading && turmas.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center">
-            <GraduationCap size={32} className="mx-auto mb-3 text-slate-600" />
-            <p className="text-slate-400">Nenhum aluno nesta turma.</p>
+            <GraduationCap
+              size={34}
+              className="mx-auto mb-3 text-slate-600"
+            />
+
+            <p className="text-slate-400">
+              Nenhuma turma está vinculada ao seu perfil.
+            </p>
+
+            <p className="mt-1 text-xs text-slate-600">
+              Entre em contato com a coordenação para verificar seus
+              vínculos.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ======================================================
+          CARREGANDO
+          ====================================================== */}
+      {loading ? (
+        <div className="flex items-center justify-center py-16 text-slate-500">
+          <Loader2
+            size={28}
+            className="animate-spin"
+          />
+        </div>
+      ) : turmas.length > 0 && boletim.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <GraduationCap
+              size={32}
+              className="mx-auto mb-3 text-slate-600"
+            />
+
+            <p className="text-slate-400">
+              Nenhum aluno nesta turma.
+            </p>
           </CardContent>
         </Card>
       ) : (
         <>
-          {/* Resumo cards */}
+          {/* ==================================================
+              RESUMO
+              ================================================== */}
           <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
-              <p className="text-xs text-emerald-300/80">Aprovados</p>
-              <p className="mt-1 text-2xl font-bold text-emerald-300">{resumo.aprov}</p>
+              <p className="text-xs text-emerald-300/80">
+                Aprovados
+              </p>
+
+              <p className="mt-1 text-2xl font-bold text-emerald-300">
+                {resumo.aprov}
+              </p>
             </div>
+
             <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
-              <p className="text-xs text-amber-300/80">Recuperação</p>
-              <p className="mt-1 text-2xl font-bold text-amber-300">{resumo.rec}</p>
+              <p className="text-xs text-amber-300/80">
+                Recuperação
+              </p>
+
+              <p className="mt-1 text-2xl font-bold text-amber-300">
+                {resumo.rec}
+              </p>
             </div>
+
             <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-4">
-              <p className="text-xs text-rose-300/80">Reprovados</p>
-              <p className="mt-1 text-2xl font-bold text-rose-300">{resumo.reprov}</p>
+              <p className="text-xs text-rose-300/80">
+                Reprovados
+              </p>
+
+              <p className="mt-1 text-2xl font-bold text-rose-300">
+                {resumo.reprov}
+              </p>
             </div>
+
             <div className="rounded-xl border border-slate-700/60 bg-slate-800/40 p-4">
-              <p className="text-xs text-slate-400">Sem notas</p>
-              <p className="mt-1 text-2xl font-bold text-slate-300">{resumo.semNotas}</p>
+              <p className="text-xs text-slate-400">
+                Sem notas
+              </p>
+
+              <p className="mt-1 text-2xl font-bold text-slate-300">
+                {resumo.semNotas}
+              </p>
             </div>
           </div>
 
-          {/* Gráfico de Desempenho */}
+          {/* ==================================================
+              GRÁFICO
+              ================================================== */}
           {chartData.length > 0 && (
             <Card className="mb-5">
               <CardHeader>
-                <CardTitle>Desempenho individual — {currentTurma?.nome}</CardTitle>
+                <CardTitle>
+                  Desempenho individual
+                  {currentTurma
+                    ? ` — ${currentTurma.nome}`
+                    : ""}
+                </CardTitle>
               </CardHeader>
+
               <CardContent>
                 <BarChart
                   data={chartData}
@@ -281,51 +556,109 @@ export function ProfessorBoletim() {
             </Card>
           )}
 
-          {/* Tabela do Boletim */}
+          {/* ==================================================
+              TABELA
+              ================================================== */}
           <Card>
             <CardHeader>
-              <CardTitle>Boletim — {currentTurma?.nome}</CardTitle>
+              <CardTitle>
+                Boletim
+                {currentTurma
+                  ? ` — ${currentTurma.nome}`
+                  : ""}
+              </CardTitle>
+
               <p className="mt-1 text-xs text-slate-500">
-                Professor: {professor?.nome} {professor?.disciplina ? `· ${professor.disciplina}` : ""}
+                Professor: {professor?.nome ?? "Professor"}
+                {professor?.disciplina
+                  ? ` · ${professor.disciplina}`
+                  : ""}
               </p>
             </CardHeader>
+
             <CardContent>
               <div className="overflow-x-auto rounded-xl border border-slate-800">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-slate-900/90 text-left text-slate-400 border-b border-slate-800">
-                      <th className="px-4 py-3 font-medium">Aluno</th>
-                      <th className="px-3 py-3 font-medium text-center">N1</th>
-                      <th className="px-3 py-3 font-medium text-center">N2</th>
-                      <th className="px-3 py-3 font-medium text-center">N3</th>
-                      <th className="px-3 py-3 font-medium text-center">Média</th>
-                      <th className="px-3 py-3 font-medium text-center">Faltas</th>
-                      <th className="px-4 py-3 font-medium">Situação</th>
+                    <tr className="border-b border-slate-800 bg-slate-900/90 text-left text-slate-400">
+                      <th className="px-4 py-3 font-medium">
+                        Aluno
+                      </th>
+
+                      <th className="px-3 py-3 text-center font-medium">
+                        N1
+                      </th>
+
+                      <th className="px-3 py-3 text-center font-medium">
+                        N2
+                      </th>
+
+                      <th className="px-3 py-3 text-center font-medium">
+                        N3
+                      </th>
+
+                      <th className="px-3 py-3 text-center font-medium">
+                        Média
+                      </th>
+
+                      <th className="px-3 py-3 text-center font-medium">
+                        Faltas
+                      </th>
+
+                      <th className="px-4 py-3 font-medium">
+                        Situação
+                      </th>
                     </tr>
                   </thead>
+
                   <tbody className="divide-y divide-slate-800/80">
-                    {boletim.map((b) => (
-                      <tr key={b.aluno.id} className="bg-slate-900/30 hover:bg-slate-800/40 transition-colors">
+                    {boletim.map((item) => (
+                      <tr
+                        key={item.aluno.id}
+                        className="bg-slate-900/30 transition-colors hover:bg-slate-800/40"
+                      >
                         <td className="px-4 py-3">
-                          <p className="font-medium text-white">{b.aluno.nome}</p>
-                          <p className="text-xs text-slate-500">{b.aluno.matricula}</p>
+                          <p className="font-medium text-white">
+                            {item.aluno.nome}
+                          </p>
+
+                          <p className="text-xs text-slate-500">
+                            {item.aluno.matricula}
+                          </p>
                         </td>
-                        <td className="px-3 py-3 text-center text-slate-300 font-mono">
-                          {b.nota?.nota_1 != null ? b.nota.nota_1 : "—"}
+
+                        <td className="px-3 py-3 text-center font-mono text-slate-300">
+                          {item.nota?.nota_1 != null
+                            ? item.nota.nota_1
+                            : "—"}
                         </td>
-                        <td className="px-3 py-3 text-center text-slate-300 font-mono">
-                          {b.nota?.nota_2 != null ? b.nota.nota_2 : "—"}
+
+                        <td className="px-3 py-3 text-center font-mono text-slate-300">
+                          {item.nota?.nota_2 != null
+                            ? item.nota.nota_2
+                            : "—"}
                         </td>
-                        <td className="px-3 py-3 text-center text-slate-300 font-mono">
-                          {b.nota?.nota_3 != null ? b.nota.nota_3 : "—"}
+
+                        <td className="px-3 py-3 text-center font-mono text-slate-300">
+                          {item.nota?.nota_3 != null
+                            ? item.nota.nota_3
+                            : "—"}
                         </td>
+
                         <td className="px-3 py-3 text-center">
-                          <StatBadge value={b.media} label="média" />
+                          <StatBadge
+                            value={item.media}
+                            label="média"
+                          />
                         </td>
+
                         <td className="px-3 py-3 text-center font-mono font-medium text-slate-300">
-                          {b.faltas}
+                          {item.faltas}
                         </td>
-                        <td className="px-4 py-3">{situacaoBadge(b.situacao)}</td>
+
+                        <td className="px-4 py-3">
+                          {situacaoBadge(item.situacao)}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -338,3 +671,4 @@ export function ProfessorBoletim() {
     </AppLayout>
   );
 }
+

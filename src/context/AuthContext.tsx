@@ -6,9 +6,16 @@ import {
   type ReactNode,
 } from "react";
 import type { Session } from "@supabase/supabase-js";
+
 import { supabase } from "../lib/supabase";
 import { loadProfile } from "../lib/api";
-import type { Usuario, Professor, TipoUsuario, Aluno } from "../lib/supabase";
+
+import type {
+  Usuario,
+  Professor,
+  TipoUsuario,
+  Aluno,
+} from "../lib/supabase";
 
 interface AuthContextValue {
   usuario: Usuario | null;
@@ -16,6 +23,7 @@ interface AuthContextValue {
   aluno: Aluno | null;
   session: Session | null;
   loading: boolean;
+
   signIn: (email: string, senha: string) => Promise<void>;
   loginAluno: (alunoRecord: Aluno) => Promise<void>;
   signOut: () => Promise<void>;
@@ -28,60 +36,132 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [professor, setProfessor] = useState<Professor | null>(null);
   const [aluno, setAluno] = useState<Aluno | null>(null);
+
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  async function applySession(s: Session | null) {
-    setSession(s);
-    if (s?.user) {
-      try {
-        const { usuario: u, professor: p, aluno: a } = await loadProfile(s.user.id);
-        setUsuario(u);
-        setProfessor(p);
-        setAluno(a);
-      } catch (err) {
-        console.error("Failed to load profile", err);
-        setUsuario(null);
-        setProfessor(null);
-        setAluno(null);
-      }
-    } else {
+  /**
+   * Carrega o perfil do usuário autenticado.
+   *
+   * O loadProfile é responsável por buscar:
+   * - usuarios
+   * - professores_oficial
+   * - alunos
+   */
+  async function applySession(currentSession: Session | null) {
+    setSession(currentSession);
+
+    if (!currentSession?.user) {
+      setUsuario(null);
+      setProfessor(null);
+      setAluno(null);
+      return;
+    }
+
+    try {
+      const {
+        usuario: usuarioData,
+        professor: professorData,
+        aluno: alunoData,
+      } = await loadProfile(currentSession.user.id);
+
+      setUsuario(usuarioData);
+      setProfessor(professorData);
+      setAluno(alunoData);
+    } catch (error) {
+      console.error("Erro ao carregar perfil do usuário:", error);
+
       setUsuario(null);
       setProfessor(null);
       setAluno(null);
     }
   }
 
+  /**
+   * Inicialização da autenticação.
+   */
   useEffect(() => {
     let mounted = true;
 
-    supabase.auth.getSession().then(({ data }) => {
-      if (!mounted) return;
-      (async () => {
-        await applySession(data.session);
-        setLoading(false);
-      })();
-    });
+    async function initializeAuth() {
+      try {
+        const { data, error } = await supabase.auth.getSession();
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
-      (async () => {
-        await applySession(s);
-        setLoading(false);
+        if (error) {
+          console.error("Erro ao recuperar sessão:", error);
+        }
+
+        if (!mounted) return;
+
+        await applySession(data.session);
+      } catch (error) {
+        console.error("Erro ao inicializar autenticação:", error);
+
+        if (mounted) {
+          setUsuario(null);
+          setProfessor(null);
+          setAluno(null);
+          setSession(null);
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    initializeAuth();
+
+    /**
+     * Escuta alterações na autenticação:
+     *
+     * - LOGIN
+     * - LOGOUT
+     * - TOKEN_REFRESHED
+     * - USER_UPDATED
+     */
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      if (!mounted) return;
+
+      void (async () => {
+        await applySession(newSession);
+
+        if (mounted) {
+          setLoading(false);
+        }
       })();
     });
 
     return () => {
       mounted = false;
-      sub.subscription.unsubscribe();
+      subscription.unsubscribe();
     };
   }, []);
 
-  async function signIn(email: string, senha: string) {
-    const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
-    if (error) throw error;
+  /**
+   * Login normal:
+   * Secretaria / Coordenação / Professor.
+   */
+  async function signIn(email: string, senha: string): Promise<void> {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password: senha,
+    });
+
+    if (error) {
+      throw error;
+    }
   }
 
-  async function loginAluno(alunoRecord: Aluno) {
+  /**
+   * Login especial do aluno.
+   *
+   * O aluno não precisa necessariamente possuir
+   * uma sessão do Supabase Auth.
+   */
+  async function loginAluno(alunoRecord: Aluno): Promise<void> {
     const profileUsuario: Usuario = {
       id: alunoRecord.id,
       nome: alunoRecord.nome,
@@ -89,32 +169,69 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       tipo_usuario: "aluno",
       aluno_id: alunoRecord.id,
     };
+
     setUsuario(profileUsuario);
     setProfessor(null);
     setAluno(alunoRecord);
+
+    // Aluno possui login próprio da aplicação.
     setSession(null);
   }
 
-  async function signOut() {
-    await supabase.auth.signOut();
-    setUsuario(null);
-    setProfessor(null);
-    setAluno(null);
-    setSession(null);
+  /**
+   * Logout.
+   */
+  async function signOut(): Promise<void> {
+    try {
+      await supabase.auth.signOut();
+    } finally {
+      setUsuario(null);
+      setProfessor(null);
+      setAluno(null);
+      setSession(null);
+    }
   }
 
-  async function refreshProfile() {
-    if (session?.user) {
-      const { usuario: u, professor: p, aluno: a } = await loadProfile(session.user.id);
-      setUsuario(u);
-      setProfessor(p);
-      setAluno(a);
+  /**
+   * Recarrega manualmente os dados do usuário.
+   *
+   * Útil depois de:
+   * - alterar professor
+   * - alterar usuário
+   * - atualizar dados
+   * - vincular professor
+   */
+  async function refreshProfile(): Promise<void> {
+    if (!session?.user) return;
+
+    try {
+      const {
+        usuario: usuarioData,
+        professor: professorData,
+        aluno: alunoData,
+      } = await loadProfile(session.user.id);
+
+      setUsuario(usuarioData);
+      setProfessor(professorData);
+      setAluno(alunoData);
+    } catch (error) {
+      console.error("Erro ao atualizar perfil:", error);
     }
   }
 
   return (
     <AuthContext.Provider
-      value={{ usuario, professor, aluno, session, loading, signIn, loginAluno, signOut, refreshProfile }}
+      value={{
+        usuario,
+        professor,
+        aluno,
+        session,
+        loading,
+        signIn,
+        loginAluno,
+        signOut,
+        refreshProfile,
+      }}
     >
       {children}
     </AuthContext.Provider>
@@ -122,15 +239,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
-export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth deve ser usado dentro de AuthProvider");
-  return ctx;
+export function useAuth(): AuthContextValue {
+  const context = useContext(AuthContext);
+
+  if (!context) {
+    throw new Error(
+      "useAuth deve ser usado dentro de AuthProvider"
+    );
+  }
+
+  return context;
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
 export function useRequireRole(roles: TipoUsuario[]) {
   const { usuario, loading } = useAuth();
-  const authorized = !!usuario && roles.includes(usuario.tipo_usuario);
-  return { usuario, loading, authorized };
+
+  const authorized =
+    !!usuario && roles.includes(usuario.tipo_usuario);
+
+  return {
+    usuario,
+    loading,
+    authorized,
+  };
 }

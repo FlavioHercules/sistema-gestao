@@ -17,7 +17,9 @@ function authedHeaders(token: string): HeadersInit {
   };
 }
 
-/** Create the first secretaria account when none exists yet. */
+/**
+ * Cria a primeira conta de secretaria quando ainda não existe nenhuma.
+ */
 export async function bootstrapSecretaria(payload: {
   nome: string;
   email: string;
@@ -31,11 +33,15 @@ export async function bootstrapSecretaria(payload: {
     });
 
     const text = await res.text();
+
     let data: any = null;
+
     try {
       data = text ? JSON.parse(text) : null;
     } catch {
-      data = { error: text || "Resposta vazia da função." };
+      data = {
+        error: text || "Resposta vazia da função.",
+      };
     }
 
     if (!res.ok) {
@@ -44,14 +50,21 @@ export async function bootstrapSecretaria(payload: {
           "A Edge Function manage-users não está publicada no projeto Supabase ou foi criada com outro nome."
         );
       }
-      throw new Error(data?.error || `Falha ao criar conta de secretaria (${res.status}).`);
+
+      throw new Error(
+        data?.error ||
+          `Falha ao criar conta de secretaria (${res.status}).`
+      );
     }
 
     return data;
   } catch (err) {
     if (err instanceof Error) {
-      throw new Error(`Erro ao chamar a função de bootstrap: ${err.message}`);
+      throw new Error(
+        `Erro ao chamar a função de bootstrap: ${err.message}`
+      );
     }
+
     throw new Error("Erro ao chamar a função de bootstrap.");
   }
 }
@@ -60,12 +73,30 @@ export interface CreateUserPayload {
   nome: string;
   email: string;
   senha: string;
-  tipo_usuario: "secretaria" | "coordenacao" | "professor" | "aluno";
+  tipo_usuario:
+    | "secretaria"
+    | "coordenacao"
+    | "professor"
+    | "aluno";
+
+  /**
+   * ID do registro em professores_oficial.
+   */
   professor_id?: string | null;
+
   aluno_id?: string | null;
 }
 
-export async function createUser(payload: CreateUserPayload, token: string) {
+/**
+ * Cria um usuário através da Edge Function manage-users.
+ *
+ * Quando for professor, o professor_id deve ser o ID
+ * do registro correspondente em professores_oficial.
+ */
+export async function createUser(
+  payload: CreateUserPayload,
+  token: string
+) {
   try {
     const res = await fetch(functionUrl, {
       method: "POST",
@@ -74,15 +105,21 @@ export async function createUser(payload: CreateUserPayload, token: string) {
     });
 
     const text = await res.text();
+
     let data: any = null;
+
     try {
       data = text ? JSON.parse(text) : null;
     } catch {
-      data = { error: text || "Resposta vazia da função." };
+      data = {
+        error: text || "Resposta vazia da função.",
+      };
     }
 
     if (!res.ok) {
-      throw new Error(data?.error || `Falha ao criar usuário (${res.status}).`);
+      throw new Error(
+        data?.error || `Falha ao criar usuário (${res.status}).`
+      );
     }
 
     return data;
@@ -90,10 +127,14 @@ export async function createUser(payload: CreateUserPayload, token: string) {
     if (err instanceof Error) {
       throw new Error(`Erro ao criar usuário: ${err.message}`);
     }
+
     throw new Error("Erro ao criar usuário.");
   }
 }
 
+/**
+ * Atualiza um usuário através da Edge Function.
+ */
 export async function updateUser(
   payload: {
     id: string;
@@ -112,15 +153,22 @@ export async function updateUser(
     });
 
     const text = await res.text();
+
     let data: any = null;
+
     try {
       data = text ? JSON.parse(text) : null;
     } catch {
-      data = { error: text || "Resposta vazia da função." };
+      data = {
+        error: text || "Resposta vazia da função.",
+      };
     }
 
     if (!res.ok) {
-      throw new Error(data?.error || `Falha ao atualizar usuário (${res.status}).`);
+      throw new Error(
+        data?.error ||
+          `Falha ao atualizar usuário (${res.status}).`
+      );
     }
 
     return data;
@@ -128,11 +176,18 @@ export async function updateUser(
     if (err instanceof Error) {
       throw new Error(`Erro ao atualizar usuário: ${err.message}`);
     }
+
     throw new Error("Erro ao atualizar usuário.");
   }
 }
 
-export async function deleteUser(id: string, token: string) {
+/**
+ * Exclui um usuário através da Edge Function.
+ */
+export async function deleteUser(
+  id: string,
+  token: string
+) {
   try {
     const res = await fetch(`${functionUrl}?id=${id}`, {
       method: "DELETE",
@@ -140,15 +195,22 @@ export async function deleteUser(id: string, token: string) {
     });
 
     const text = await res.text();
+
     let data: any = null;
+
     try {
       data = text ? JSON.parse(text) : null;
     } catch {
-      data = { error: text || "Resposta vazia da função." };
+      data = {
+        error: text || "Resposta vazia da função.",
+      };
     }
 
     if (!res.ok) {
-      throw new Error(data?.error || `Falha ao excluir usuário (${res.status}).`);
+      throw new Error(
+        data?.error ||
+          `Falha ao excluir usuário (${res.status}).`
+      );
     }
 
     return data;
@@ -156,12 +218,22 @@ export async function deleteUser(id: string, token: string) {
     if (err instanceof Error) {
       throw new Error(`Erro ao excluir usuário: ${err.message}`);
     }
+
     throw new Error("Erro ao excluir usuário.");
   }
 }
 
-/** Load the app-level profile + linked professor for a signed-in auth user. */
-export async function loadProfile(authId: string): Promise<{
+/**
+ * Carrega o perfil da aplicação + professor/aluno relacionado
+ * ao usuário autenticado.
+ *
+ * PROFESSORES:
+ * Agora o perfil docente é buscado exclusivamente em
+ * professores_oficial.
+ */
+export async function loadProfile(
+  authId: string
+): Promise<{
   usuario: Usuario | null;
   professor: Professor | null;
   aluno: Aluno | null;
@@ -172,22 +244,44 @@ export async function loadProfile(authId: string): Promise<{
     .eq("id", authId)
     .maybeSingle();
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 
   let professor: Professor | null = null;
   let aluno: Aluno | null = null;
 
   if (usuario) {
+    /**
+     * PROFESSOR
+     *
+     * O professor agora é buscado em professores_oficial.
+     */
     if (usuario.professor_id) {
-      const { data: prof } = await supabase
-        .from("professores")
+      const { data: prof, error: profError } = await supabase
+        .from("professores_oficial")
         .select("*")
         .eq("id", usuario.professor_id)
         .maybeSingle();
+
+      if (profError) {
+        console.error(
+          "Erro ao carregar professor_oficial:",
+          profError
+        );
+      }
+
       professor = prof as Professor | null;
     }
 
-    const alunoIdParaBuscar = usuario.aluno_id || (usuario.tipo_usuario === "aluno" ? usuario.id : null);
+    /**
+     * ALUNO
+     */
+    const alunoIdParaBuscar =
+      usuario.aluno_id ||
+      (usuario.tipo_usuario === "aluno"
+        ? usuario.id
+        : null);
 
     if (alunoIdParaBuscar) {
       const { data: alunoData } = await supabase
@@ -195,13 +289,23 @@ export async function loadProfile(authId: string): Promise<{
         .select("*, turma:turmas(*)")
         .eq("id", alunoIdParaBuscar)
         .maybeSingle();
+
       aluno = alunoData as Aluno | null;
     }
 
-    return { usuario: usuario as Usuario, professor, aluno };
+    return {
+      usuario: usuario as Usuario,
+      professor,
+      aluno,
+    };
   }
 
-  // Fallback caso o usuário logado seja diretamente um aluno sem registro prévio na tabela "usuarios"
+  /**
+   * Fallback:
+   *
+   * Caso o usuário autenticado seja diretamente um aluno
+   * sem registro correspondente em usuarios.
+   */
   const { data: alunoDireto } = await supabase
     .from("alunos")
     .select("*, turma:turmas(*)")
@@ -216,8 +320,17 @@ export async function loadProfile(authId: string): Promise<{
       tipo_usuario: "aluno",
       aluno_id: alunoDireto.id,
     };
-    return { usuario: usuarioAluno, professor: null, aluno: alunoDireto as Aluno };
+
+    return {
+      usuario: usuarioAluno,
+      professor: null,
+      aluno: alunoDireto as Aluno,
+    };
   }
 
-  return { usuario: null, professor: null, aluno: null };
+  return {
+    usuario: null,
+    professor: null,
+    aluno: null,
+  };
 }
