@@ -23,6 +23,7 @@ import {
 } from "../../lib/school";
 import { supabase } from "../../lib/supabase";
 
+import { professorNavItems } from "../../lib/navigation";
 import { AppLayout } from "../../components/layout/AppLayout";
 import { Card, CardContent } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -32,34 +33,6 @@ import * as pdfjsLib from "pdfjs-dist";
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
-
-const navItems = [
-  {
-    to: "/professor",
-    label: "Dashboard",
-    icon: GraduationCap,
-  },
-  {
-    to: "/professor/turmas",
-    label: "Minhas turmas",
-    icon: School,
-  },
-  {
-    to: "/professor/notas",
-    label: "Notas",
-    icon: ClipboardList,
-  },
-  {
-    to: "/professor/boletim",
-    label: "Boletins",
-    icon: BookOpen,
-  },
-  {
-    to: "/professor/atividades",
-    label: "Atividades",
-    icon: Layers,
-  },
-];
 
 const UNIDADES = [
   { id: 1, label: "1ª Unidade" },
@@ -752,7 +725,7 @@ export function ProfessorNotas() {
 
                 observacao:
                   d.observacao || null,
-              } as any);
+              });
 
             return {
               alunoId,
@@ -830,7 +803,7 @@ export function ProfessorNotas() {
   ]);
 
   return (
-    <AppLayout navItems={navItems}>
+    <AppLayout navItems={professorNavItems}>
       <PageHeader
         title="Planilha de Notas e Faltas"
         description="Gerencie as avaliações por unidade ou importe dados externos do SIGEduc via PDF ou CSV."

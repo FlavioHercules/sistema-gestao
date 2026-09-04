@@ -134,16 +134,15 @@ export function AlunoAtividades() {
 
           setAvisos([]);
         } else {
-          const filtrados = (
-            avisosData ?? []
-          ).filter((aviso: any) => {
+          const avisosList = (avisosData ?? []) as Aviso[];
+          const filtrados = avisosList.filter((aviso) => {
             return (
               aviso.tipo === "geral" ||
               aviso.turma_id === turmaIdValido
             );
           });
 
-          setAvisos(filtrados as Aviso[]);
+          setAvisos(filtrados);
         }
       } catch (err) {
         console.error(

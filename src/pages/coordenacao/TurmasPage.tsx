@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   Plus,
   Pencil,
@@ -26,53 +26,7 @@ import { Input } from "../../components/ui/Input";
 import { DataTable } from "../../components/ui/DataTable";
 import { SearchInput } from "../../components/ui/SearchInput";
 import { PageHeader, ErrorBanner } from "../../components/ui/Misc";
-
-/* =========================================================
-   NAVEGAÇÃO
-========================================================= */
-
-const navItems = [
-  {
-    to: "/coordenacao",
-    label: "Dashboard",
-    icon: GraduationCap,
-  },
-  {
-    to: "/coordenacao/professores",
-    label: "Professores",
-    icon: UserCheck,
-  },
-  {
-    to: "/coordenacao/disciplinas",
-    label: "Disciplinas",
-    icon: BookOpen,
-  },
-  {
-    to: "/coordenacao/turmas",
-    label: "Turmas",
-    icon: Users,
-  },
-  {
-    to: "/coordenacao/associacoes",
-    label: "Atribuir Disciplinas",
-    icon: ClipboardList,
-  },
-  {
-    to: "/coordenacao/horarios",
-    label: "Horários",
-    icon: CalendarDays,
-  },
-  {
-    to: "/coordenacao/avisos",
-    label: "Avisos",
-    icon: BellRing,
-  },
-  {
-    to: "/coordenacao/usuarios",
-    label: "Usuários",
-    icon: Shield,
-  },
-];
+import { coordenacaoNavItems } from "../../lib/navigation";
 
 /* =========================================================
    CONSTANTES
@@ -100,8 +54,8 @@ const ANOS_SERIES = [
 type TurmaComTotal = Turma & {
   aluno_count?: number;
   professor_count?: number;
-  curso?: string;
-  ano?: string;
+  curso?: string | null;
+  ano?: string | null;
 };
 
 /* =========================================================
@@ -138,6 +92,7 @@ export function CoordenacaoTurmasPage() {
   const [nomeTurma, setNomeTurma] = useState("");
   const [curso, setCurso] = useState(CURSOS[0]);
   const [anoSerie, setAnoSerie] = useState(ANOS_SERIES[0]);
+
   const [anoLetivo, setAnoLetivo] = useState(
     new Date().getFullYear().toString()
   );
@@ -204,6 +159,7 @@ export function CoordenacaoTurmasPage() {
     setNomeTurma("");
     setCurso(CURSOS[0]);
     setAnoSerie(ANOS_SERIES[0]);
+
     setAnoLetivo(
       new Date().getFullYear().toString()
     );
@@ -243,7 +199,7 @@ export function CoordenacaoTurmasPage() {
   ======================================================= */
 
   async function handleSaveTurma(
-    e: React.FormEvent
+    e: FormEvent
   ) {
     e.preventDefault();
 
@@ -262,7 +218,9 @@ export function CoordenacaoTurmasPage() {
 
     if (
       !anoLetivo ||
-      !Number.isInteger(anoLetivoNumero)
+      !Number.isInteger(anoLetivoNumero) ||
+      anoLetivoNumero < 2020 ||
+      anoLetivoNumero > 2100
     ) {
       setError(
         "Informe um ano letivo válido."
@@ -404,12 +362,18 @@ export function CoordenacaoTurmasPage() {
   ======================================================= */
 
   return (
-    <AppLayout navItems={navItems}>
+    <AppLayout
+      navItems={coordenacaoNavItems}
+      brandLabel="EduGrade"
+      brandSub="Coordenação"
+    >
       <PageHeader
         title="Gestão de Turmas"
         description="Cadastre e organize as turmas da instituição por curso e ano."
         action={
-          <Button onClick={openCreateModal}>
+          <Button
+            onClick={openCreateModal}
+          >
             <Plus size={16} />
             Nova Turma
           </Button>
@@ -447,9 +411,7 @@ export function CoordenacaoTurmasPage() {
               <SearchInput
                 value={search}
                 onChange={(e) =>
-                  setSearch(
-                    e.target.value
-                  )
+                  setSearch(e.target.value)
                 }
                 placeholder="Buscar por nome, curso ou série..."
               />
@@ -548,9 +510,7 @@ export function CoordenacaoTurmasPage() {
 
                   render: (turma) => (
                     <span className="inline-flex items-center gap-1.5 rounded-md border border-sky-500/20 bg-sky-500/10 px-2.5 py-1 text-xs font-medium text-sky-400">
-                      <BookOpen
-                        size={12}
-                      />
+                      <BookOpen size={12} />
 
                       {turma.curso ||
                         "Não definido"}
@@ -586,9 +546,7 @@ export function CoordenacaoTurmasPage() {
 
                   render: (turma) => (
                     <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                      <Users
-                        size={14}
-                      />
+                      <Users size={14} />
 
                       {turma.aluno_count ??
                         0}
@@ -615,8 +573,7 @@ export function CoordenacaoTurmasPage() {
                 {
                   key: "actions",
                   header: "",
-                  className:
-                    "text-right",
+                  className: "text-right",
 
                   render: (turma) => (
                     <div className="flex items-center justify-end gap-1">
@@ -662,6 +619,7 @@ export function CoordenacaoTurmasPage() {
               emptyMessage="Nenhuma turma cadastrada ou encontrada para esses filtros."
             />
           )}
+
         </CardContent>
       </Card>
 
@@ -695,8 +653,8 @@ export function CoordenacaoTurmasPage() {
             </Button>
 
             <Button
-              type="button"
-              onClick={handleSaveTurma}
+              type="submit"
+              form="turma-form"
               disabled={saving}
             >
               {saving ? (
@@ -707,6 +665,7 @@ export function CoordenacaoTurmasPage() {
               ) : (
                 <>
                   <Plus size={16} />
+
                   {editing
                     ? "Salvar Alterações"
                     : "Salvar Turma"}
@@ -717,6 +676,7 @@ export function CoordenacaoTurmasPage() {
         }
       >
         <form
+          id="turma-form"
           onSubmit={handleSaveTurma}
           className="space-y-4"
         >
@@ -854,6 +814,7 @@ export function CoordenacaoTurmasPage() {
         }
       >
         <div className="space-y-3">
+
           <p className="text-sm text-slate-300">
             Você está prestes a excluir
             a turma{" "}
@@ -874,6 +835,7 @@ export function CoordenacaoTurmasPage() {
               dados.
             </p>
           </div>
+
         </div>
       </Modal>
     </AppLayout>

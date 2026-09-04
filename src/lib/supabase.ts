@@ -1,14 +1,12 @@
+
 import { createClient } from "@supabase/supabase-js";
 
 // ============================================================
 // SUPABASE CLIENT
 // ============================================================
 
-const supabaseUrl =
-  import.meta.env.VITE_SUPABASE_URL || "";
-
-const supabaseAnonKey =
-  import.meta.env.VITE_SUPABASE_ANON_KEY || "";
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error(
@@ -66,14 +64,13 @@ export interface Usuario {
 // PROFESSOR
 // ============================================================
 //
-// ATENÇÃO:
-// A tabela oficial agora é:
+// A tabela oficial de professores é:
 //
 // professores_oficial
 //
-// O campo usuario_id faz a ligação com a tabela usuarios.
+// O campo usuario_id faz a ligação com usuarios.
 //
-// Não utilizar mais a tabela "professores" para novos cadastros.
+// Não utilizar a tabela "professores" para novos cadastros.
 //
 
 export interface Professor {
@@ -93,8 +90,8 @@ export interface Professor {
   updated_at?: string;
 }
 
-// Alias explícito para deixar claro qual tabela representa
-// o professor oficial no sistema.
+// Alias explícito para deixar claro que representa
+// o professor oficial do sistema.
 export type ProfessorOficial = Professor;
 
 // ============================================================
@@ -125,6 +122,10 @@ export interface Turma {
 
   curso?: string | null;
 
+  serie?: string | null;
+
+  ano?: string | null;
+
   created_at?: string;
   updated_at?: string;
 }
@@ -132,9 +133,6 @@ export interface Turma {
 // ============================================================
 // TURMA + PROFESSOR
 // ============================================================
-//
-// Relacionamento entre professores_oficial e turmas.
-//
 
 export interface TurmaProfessor {
   turma_id: string;
@@ -287,3 +285,4 @@ export interface AuthSession {
 
   loading: boolean;
 }
+

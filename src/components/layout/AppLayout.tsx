@@ -13,19 +13,20 @@ interface NavItem {
   to: string;
   label: string;
   icon: LucideIcon;
+  section?: string;
 }
 
 interface AppLayoutProps {
   navItems: NavItem[];
-  brandLabel: string;
-  brandSub: string;
+  brandLabel?: string;
+  brandSub?: string;
   children: ReactNode;
 }
 
 export function AppLayout({
   navItems,
-  brandLabel,
-  brandSub,
+  brandLabel = "EduGrade",
+  brandSub = "Sistema",
   children,
 }: AppLayoutProps) {
   const { usuario, signOut } = useAuth();
@@ -38,39 +39,72 @@ export function AppLayout({
     navigate("/login");
   }
 
+  const navGroups = navItems.reduce(
+    (groups, item) => {
+      const section = item.section ?? "";
+      const existing = groups.find(
+        (group) => group.section === section
+      );
+
+      if (existing) {
+        existing.items.push(item);
+      } else {
+        groups.push({ section, items: [item] });
+      }
+
+      return groups;
+    },
+    [] as Array<{
+      section: string;
+      items: NavItem[];
+    }>
+  );
+
   const navContent = (
-    <nav className="space-y-1 px-3">
-      {navItems.map((item) => {
-        const Icon = item.icon;
+    <div className="space-y-6 px-3">
+      {navGroups.map((group) => (
+        <div key={group.section || "main"}>
+          {group.section && (
+            <p className="mb-2 text-xs uppercase tracking-[0.18em] text-slate-500">
+              {group.section}
+            </p>
+          )}
 
-        return (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={
-              item.to === "/secretaria" ||
-              item.to === "/professor" ||
-              item.to === "/aluno" ||
-              item.to === "/coordenacao"
-            }
-            onClick={() => setOpen(false)}
-            className={({ isActive }) =>
-              [
-                "flex items-center gap-3 rounded-lg px-3 py-2.5",
-                "text-sm font-medium transition-all",
-                isActive
-                  ? "bg-sky-500/15 text-sky-300 ring-1 ring-sky-500/20"
-                  : "text-slate-400 hover:bg-slate-800/60 hover:text-white",
-              ].join(" ")
-            }
-          >
-            <Icon size={18} className="shrink-0" />
+          <nav className="space-y-1">
+            {group.items.map((item) => {
+              const Icon = item.icon;
 
-            <span>{item.label}</span>
-          </NavLink>
-        );
-      })}
-    </nav>
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={
+                    item.to === "/secretaria" ||
+                    item.to === "/professor" ||
+                    item.to === "/aluno" ||
+                    item.to === "/coordenacao"
+                  }
+                  onClick={() => setOpen(false)}
+                  className={({ isActive }) =>
+                    [
+                      "flex items-center gap-3 rounded-lg px-3 py-2.5",
+                      "text-sm font-medium transition-all",
+                      isActive
+                        ? "bg-sky-500/15 text-sky-300 ring-1 ring-sky-500/20"
+                        : "text-slate-400 hover:bg-slate-800/60 hover:text-white",
+                    ].join(" ")
+                  }
+                >
+                  <Icon size={18} className="shrink-0" />
+
+                  <span>{item.label}</span>
+                </NavLink>
+              );
+            })}
+          </nav>
+        </div>
+      ))}
+    </div>
   );
 
   return (

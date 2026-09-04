@@ -13,6 +13,7 @@ import {
 import { supabase } from "../../lib/supabase";
 import type { Turma } from "../../lib/supabase";
 
+import { coordenacaoNavItems } from "../../lib/navigation";
 import { AppLayout } from "../../components/layout/AppLayout";
 import {
   Card,
@@ -22,49 +23,6 @@ import {
 } from "../../components/ui/Card";
 import { Select } from "../../components/ui/Input";
 import { PageHeader, ErrorBanner } from "../../components/ui/Misc";
-
-const navItems = [
-  {
-    to: "/coordenacao",
-    label: "Dashboard",
-    icon: CalendarDays,
-  },
-  {
-    to: "/coordenacao/professores",
-    label: "Professores",
-    icon: ImageIcon,
-  },
-  {
-    to: "/coordenacao/disciplinas",
-    label: "Disciplinas",
-    icon: FileText,
-  },
-  {
-    to: "/coordenacao/turmas",
-    label: "Turmas",
-    icon: CalendarDays,
-  },
-  {
-    to: "/coordenacao/associacoes",
-    label: "Atribuir Disciplinas",
-    icon: CheckCircle2,
-  },
-  {
-    to: "/coordenacao/horarios",
-    label: "Horários",
-    icon: CalendarDays,
-  },
-  {
-    to: "/coordenacao/avisos",
-    label: "Avisos",
-    icon: FileText,
-  },
-  {
-    to: "/coordenacao/usuarios",
-    label: "Usuários",
-    icon: CheckCircle2,
-  },
-];
 
 export function CoordenacaoHorariosPage() {
   const [turmas, setTurmas] = useState<Turma[]>([]);
@@ -345,7 +303,7 @@ export function CoordenacaoHorariosPage() {
   );
 
   return (
-    <AppLayout navItems={navItems}>
+    <AppLayout navItems={coordenacaoNavItems}>
       <PageHeader
         title="Gestão de Horários"
         description="Envie e gerencie a grade horária de cada turma da instituição."

@@ -11,11 +11,11 @@ import {
   School,
   CalendarDays,
   BellRing,
-  ClipboardList,
 } from "lucide-react";
 
 import { supabase } from "../../lib/supabase";
 import { AppLayout } from "../../components/layout/AppLayout";
+import { coordenacaoNavItems } from "../../lib/navigation";
 import { Button } from "../../components/ui/Button";
 import {
   Card,
@@ -29,49 +29,6 @@ import {
   PageHeader,
   ErrorBanner,
 } from "../../components/ui/Misc";
-
-const navItems = [
-  {
-    to: "/coordenacao",
-    label: "Dashboard",
-    icon: GraduationCap,
-  },
-  {
-    to: "/coordenacao/professores",
-    label: "Professores",
-    icon: UserCheck,
-  },
-  {
-    to: "/coordenacao/disciplinas",
-    label: "Disciplinas",
-    icon: BookOpen,
-  },
-  {
-    to: "/coordenacao/turmas",
-    label: "Turmas",
-    icon: School,
-  },
-  {
-    to: "/coordenacao/associacoes",
-    label: "Atribuir Disciplinas",
-    icon: Users,
-  },
-  {
-    to: "/coordenacao/horarios",
-    label: "Horários",
-    icon: CalendarDays,
-  },
-  {
-    to: "/coordenacao/avisos",
-    label: "Avisos",
-    icon: BellRing,
-  },
-  {
-    to: "/coordenacao/usuarios",
-    label: "Usuários",
-    icon: Shield,
-  },
-];
 
 type Disciplina = {
   id: string;
@@ -371,7 +328,7 @@ export function CoordenacaoDisciplinasPage() {
 
   return (
     <AppLayout
-      navItems={navItems}
+      navItems={coordenacaoNavItems}
       brandLabel="EduGrade"
       brandSub="Coordenação"
     >

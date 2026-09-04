@@ -12,6 +12,7 @@ import {
   CalendarDays,
 } from "lucide-react";
 
+import { coordenacaoNavItems } from "../../lib/navigation";
 import { AppLayout } from "../../components/layout/AppLayout";
 import { Button } from "../../components/ui/Button";
 import {
@@ -28,49 +29,6 @@ import {
 import { useToast } from "../../components/ui/Toast";
 import { supabase } from "../../lib/supabase";
 import type { Turma } from "../../lib/supabase";
-
-const navItems = [
-  {
-    to: "/coordenacao",
-    label: "Dashboard",
-    icon: GraduationCap,
-  },
-  {
-    to: "/coordenacao/professores",
-    label: "Professores",
-    icon: Users,
-  },
-  {
-    to: "/coordenacao/disciplinas",
-    label: "Disciplinas",
-    icon: BookOpen,
-  },
-  {
-    to: "/coordenacao/turmas",
-    label: "Turmas",
-    icon: School,
-  },
-  {
-    to: "/coordenacao/associacoes",
-    label: "Atribuir Disciplinas",
-    icon: Shield,
-  },
-  {
-    to: "/coordenacao/horarios",
-    label: "Horários",
-    icon: CalendarDays,
-  },
-  {
-    to: "/coordenacao/avisos",
-    label: "Avisos",
-    icon: BellRing,
-  },
-  {
-    to: "/coordenacao/usuarios",
-    label: "Usuários",
-    icon: Users,
-  },
-];
 
 interface AvisoItem {
   id: string;
@@ -285,7 +243,7 @@ export function CoordenacaoAvisosPage() {
 
   return (
     <AppLayout
-      navItems={navItems}
+      navItems={coordenacaoNavItems}
       brandLabel="EduGrade"
       brandSub="Coordenação"
     >

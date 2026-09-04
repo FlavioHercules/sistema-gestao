@@ -18,6 +18,7 @@ import {
 import { supabase } from "../../lib/supabase";
 import { createUser } from "../../lib/api";
 import { useAuth } from "../../context/AuthContext";
+import { coordenacaoNavItems } from "../../lib/navigation";
 import { AppLayout } from "../../components/layout/AppLayout";
 import { Button } from "../../components/ui/Button";
 import { Card, CardContent } from "../../components/ui/Card";
@@ -29,49 +30,6 @@ import {
   PageHeader,
   ErrorBanner,
 } from "../../components/ui/Misc";
-
-const navItems = [
-  {
-    to: "/coordenacao",
-    label: "Dashboard",
-    icon: Users,
-  },
-  {
-    to: "/coordenacao/professores",
-    label: "Professores",
-    icon: UserCheck,
-  },
-  {
-    to: "/coordenacao/disciplinas",
-    label: "Disciplinas",
-    icon: BookOpen,
-  },
-  {
-    to: "/coordenacao/turmas",
-    label: "Turmas",
-    icon: GraduationCap,
-  },
-  {
-    to: "/coordenacao/associacoes",
-    label: "Atribuir Disciplinas",
-    icon: Link2,
-  },
-  {
-    to: "/coordenacao/horarios",
-    label: "Horários",
-    icon: CalendarDays,
-  },
-  {
-    to: "/coordenacao/avisos",
-    label: "Avisos",
-    icon: Bell,
-  },
-  {
-    to: "/coordenacao/usuarios",
-    label: "Usuários",
-    icon: Users,
-  },
-];
 
 type Usuario = {
   id: string;
@@ -348,7 +306,7 @@ export function UsuariosPage() {
 
   return (
     <AppLayout
-      navItems={navItems}
+      navItems={coordenacaoNavItems}
       brandLabel="EduGrade"
       brandSub="Coordenação"
     >
@@ -479,13 +437,15 @@ export function UsuariosPage() {
 
             <Button
               type="button"
-              onClick={() =>
-                document
-                  .getElementById(
-                    "create-user-form"
-                  )
-                  ?.requestSubmit()
-              }
+              onClick={() => {
+                const form = document.getElementById(
+                  "create-user-form"
+                );
+
+                if (form instanceof HTMLFormElement) {
+                  form.requestSubmit();
+                }
+              }}
               disabled={saving}
             >
               {saving ? (

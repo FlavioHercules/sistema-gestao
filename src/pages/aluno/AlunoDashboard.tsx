@@ -67,7 +67,7 @@ interface Aviso {
   created_at?: string | null;
   turmas?: {
     nome?: string | null;
-  } | null;
+  }[] | null;
 }
 
 export function AlunoDashboard() {

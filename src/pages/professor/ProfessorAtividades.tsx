@@ -22,6 +22,7 @@ import {
   getAtividadesByTurma,
 } from "../../lib/school";
 
+import { professorNavItems } from "../../lib/navigation";
 import { AppLayout } from "../../components/layout/AppLayout";
 import { Button } from "../../components/ui/Button";
 import {
@@ -36,40 +37,6 @@ import {
   ErrorBanner,
 } from "../../components/ui/Misc";
 import { useToast } from "../../components/ui/Toast";
-
-interface NavItem {
-  to: string;
-  label: string;
-  icon: LucideIcon;
-}
-
-const navItems: NavItem[] = [
-  {
-    to: "/professor",
-    label: "Dashboard",
-    icon: School,
-  },
-  {
-    to: "/professor/turmas",
-    label: "Minhas turmas",
-    icon: GraduationCap,
-  },
-  {
-    to: "/professor/notas",
-    label: "Notas",
-    icon: ClipboardList,
-  },
-  {
-    to: "/professor/boletim",
-    label: "Boletins",
-    icon: BookOpen,
-  },
-  {
-    to: "/professor/atividades",
-    label: "Atividades",
-    icon: Plus,
-  },
-];
 
 interface VinculoTurmaDisciplina {
   turma_id: string;
@@ -619,7 +586,7 @@ export function ProfessorAtividades() {
 
   return (
     <AppLayout
-      navItems={navItems}
+      navItems={professorNavItems}
       brandLabel="EduGrade"
       brandSub="Área do Professor"
     >

@@ -1,7 +1,6 @@
 
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import type { LucideIcon } from "lucide-react";
 import {
   School,
   ClipboardList,
@@ -14,45 +13,12 @@ import {
 
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../context/AuthContext";
+import { professorNavItems } from "../../lib/navigation";
 import { AppLayout } from "../../components/layout/AppLayout";
 import { StatCard } from "../../components/ui/StatCard";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import { BarChart } from "../../components/ui/Charts";
 import { PageHeader } from "../../components/ui/Misc";
-
-interface NavItem {
-  to: string;
-  label: string;
-  icon: LucideIcon;
-}
-
-const navItems: NavItem[] = [
-  {
-    to: "/professor",
-    label: "Dashboard",
-    icon: School,
-  },
-  {
-    to: "/professor/turmas",
-    label: "Minhas turmas",
-    icon: GraduationCap,
-  },
-  {
-    to: "/professor/notas",
-    label: "Notas",
-    icon: ClipboardList,
-  },
-  {
-    to: "/professor/boletim",
-    label: "Boletins",
-    icon: BookOpen,
-  },
-  {
-    to: "/professor/atividades",
-    label: "Atividades",
-    icon: ImageIcon,
-  },
-];
 
 interface TurmaInfo {
   id: string;
@@ -63,12 +29,12 @@ interface TurmaInfo {
 
 interface Vinculo {
   turma_id: string;
-  turmas:
+  turmas?:
     | {
         id: string;
         nome: string;
         ano_letivo: number;
-      }
+      }[]
     | null;
 }
 
@@ -135,7 +101,9 @@ export function ProfessorDashboard() {
         >();
 
         (vinculos as Vinculo[] | null)?.forEach((vinculo) => {
-          const turma = vinculo.turmas;
+          const turma = Array.isArray(vinculo.turmas)
+            ? vinculo.turmas[0]
+            : vinculo.turmas;
 
           if (turma && !turmasMap.has(turma.id)) {
             turmasMap.set(turma.id, turma);
@@ -145,9 +113,6 @@ export function ProfessorDashboard() {
         const profTurmas = Array.from(turmasMap.values());
         const turmaIds = profTurmas.map((turma) => turma.id);
 
-        /*
-         * 2. BUSCAR QUANTIDADE DE ALUNOS
-         */
         const turmasComAlunos: TurmaInfo[] = await Promise.all(
           profTurmas.map(async (turma) => {
             const { count, error } = await supabase
@@ -308,7 +273,7 @@ export function ProfessorDashboard() {
 
   return (
     <AppLayout
-      navItems={navItems}
+      navItems={professorNavItems}
       brandLabel="EduGrade"
       brandSub="Área do Professor"
     >
@@ -317,7 +282,7 @@ export function ProfessorDashboard() {
           professor?.nome?.split(" ")[0] ?? "Professor"
         }`}
         description={`${
-          professor?.disciplina ?? "Docente"
+          professor?.area_formacao ?? "Docente"
         } — aqui está o resumo da sua atividade`}
       />
 

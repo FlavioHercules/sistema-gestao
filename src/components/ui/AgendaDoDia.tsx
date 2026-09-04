@@ -1,8 +1,20 @@
 import { CalendarClock, Clock3, Sparkles } from "lucide-react";
-import type { Horario } from "../../lib/supabase";
+
+interface HorarioItem {
+  id?: string;
+  dia_semana?: string | null;
+  hora_inicio?: string | null;
+  hora_fim?: string | null;
+  disciplina?: {
+    nome?: string | null;
+  } | null;
+  professor?: {
+    nome?: string | null;
+  } | null;
+}
 
 interface AgendaDoDiaProps {
-  horarios?: Horario[] | any[];
+  horarios?: HorarioItem[];
   title?: string;
   emptyMessage?: string;
 }

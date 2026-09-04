@@ -25,6 +25,18 @@ import {
   getAtividadesByTurma,
 } from "../../lib/school";
 
+interface HorarioDetalhado extends Horario {
+  dia_semana?: string | null;
+  hora_inicio?: string | null;
+  hora_fim?: string | null;
+  disciplina?: {
+    nome?: string | null;
+  } | null;
+  professor?: {
+    nome?: string | null;
+  } | null;
+}
+
 import { AppLayout } from "../../components/layout/AppLayout";
 import {
   Card,
@@ -83,7 +95,7 @@ export function SecretariaDashboard() {
 
   const [turmas, setTurmas] = useState<Turma[]>([]);
   const [boletins, setBoletins] = useState<BoletimAluno[]>([]);
-  const [horarios, setHorarios] = useState<Horario[]>([]);
+  const [horarios, setHorarios] = useState<HorarioDetalhado[]>([]);
   const [atividades, setAtividades] = useState<Atividade[]>([]);
 
   const [loading, setLoading] = useState(true);

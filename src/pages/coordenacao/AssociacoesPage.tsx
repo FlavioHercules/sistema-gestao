@@ -15,55 +15,13 @@ import { supabase } from "../../lib/supabase";
 import type { Professor, Turma, Disciplina } from "../../lib/supabase";
 
 import { AppLayout } from "../../components/layout/AppLayout";
+import { coordenacaoNavItems } from "../../lib/navigation";
 import { Button } from "../../components/ui/Button";
 import { Card, CardContent } from "../../components/ui/Card";
 import { Modal } from "../../components/ui/Modal";
 import { Select } from "../../components/ui/Input";
 import { DataTable } from "../../components/ui/DataTable";
 import { PageHeader, ErrorBanner } from "../../components/ui/Misc";
-
-const navItems = [
-  {
-    to: "/coordenacao",
-    label: "Dashboard",
-    icon: GraduationCap,
-  },
-  {
-    to: "/coordenacao/professores",
-    label: "Professores",
-    icon: UserCheck,
-  },
-  {
-    to: "/coordenacao/disciplinas",
-    label: "Disciplinas",
-    icon: BookOpen,
-  },
-  {
-    to: "/coordenacao/turmas",
-    label: "Turmas",
-    icon: Users,
-  },
-  {
-    to: "/coordenacao/associacoes",
-    label: "Atribuir Disciplinas",
-    icon: Layers,
-  },
-  {
-    to: "/coordenacao/horarios",
-    label: "Horários",
-    icon: BookOpen,
-  },
-  {
-    to: "/coordenacao/avisos",
-    label: "Avisos",
-    icon: Shield,
-  },
-  {
-    to: "/coordenacao/usuarios",
-    label: "Usuários",
-    icon: Users,
-  },
-];
 
 interface AssociacaoItem {
   id: string;
@@ -324,7 +282,7 @@ export function CoordenacaoAssociacoesPage() {
   }
 
   return (
-    <AppLayout navItems={navItems}>
+    <AppLayout navItems={coordenacaoNavItems}>
       <PageHeader
         title="Atribuição de Disciplinas"
         description="Vincule professores às suas turmas e disciplinas correspondentes."

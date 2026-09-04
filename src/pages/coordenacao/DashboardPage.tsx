@@ -16,6 +16,7 @@ import { Link } from "react-router-dom";
 
 import { supabase } from "../../lib/supabase";
 import { AppLayout } from "../../components/layout/AppLayout";
+import { coordenacaoNavItems } from "../../lib/navigation";
 import {
   Card,
   CardContent,
@@ -23,49 +24,6 @@ import {
   CardTitle,
 } from "../../components/ui/Card";
 import { PageHeader } from "../../components/ui/Misc";
-
-const navItems = [
-  {
-    to: "/coordenacao",
-    label: "Dashboard",
-    icon: School,
-  },
-  {
-    to: "/coordenacao/professores",
-    label: "Professores",
-    icon: UserCheck,
-  },
-  {
-    to: "/coordenacao/disciplinas",
-    label: "Disciplinas",
-    icon: BookOpen,
-  },
-  {
-    to: "/coordenacao/turmas",
-    label: "Turmas",
-    icon: GraduationCap,
-  },
-  {
-    to: "/coordenacao/associacoes",
-    label: "Atribuir Disciplinas",
-    icon: Link2,
-  },
-  {
-    to: "/coordenacao/horarios",
-    label: "Horários",
-    icon: CalendarDays,
-  },
-  {
-    to: "/coordenacao/avisos",
-    label: "Avisos",
-    icon: BellRing,
-  },
-  {
-    to: "/coordenacao/usuarios",
-    label: "Usuários",
-    icon: Users,
-  },
-];
 
 export function CoordenacaoDashboardPage() {
   const [stats, setStats] = useState({
@@ -166,7 +124,7 @@ export function CoordenacaoDashboardPage() {
 
   return (
     <AppLayout
-      navItems={navItems}
+      navItems={coordenacaoNavItems}
       brandLabel="EduGrade"
       brandSub="Coordenação"
     >

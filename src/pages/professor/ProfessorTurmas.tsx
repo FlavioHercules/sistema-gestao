@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -9,42 +8,16 @@ import {
   LayoutDashboard,
   ClipboardList,
   BookOpen,
+  CalendarDays,
 } from "lucide-react";
 
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../context/AuthContext";
 import type { Turma } from "../../lib/supabase";
+import { professorNavItems } from "../../lib/navigation";
 import { AppLayout } from "../../components/layout/AppLayout";
 import { Card, CardContent } from "../../components/ui/Card";
 import { PageHeader } from "../../components/ui/Misc";
-
-const navItems = [
-  {
-    to: "/professor",
-    label: "Dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    to: "/professor/turmas",
-    label: "Minhas turmas",
-    icon: School,
-  },
-  {
-    to: "/professor/notas",
-    label: "Notas",
-    icon: ClipboardList,
-  },
-  {
-    to: "/professor/boletim",
-    label: "Boletins",
-    icon: BookOpen,
-  },
-  {
-    to: "/professor/atividades",
-    label: "Atividades",
-    icon: ClipboardList,
-  },
-];
 
 type TurmaComAlunos = Turma & {
   aluno_count: number;
@@ -68,33 +41,34 @@ export function ProfessorTurmas() {
       setLoading(true);
 
       try {
-        // Busca todas as turmas vinculadas ao professor
         const { data: vinculos, error: vinculosErr } = await supabase
           .from("professor_turma_disciplina")
-          .select(
-            "turmas (id, nome, ano_letivo, curso)"
-          )
+          .select("turmas (id, nome, ano_letivo, curso)")
           .eq("professor_id", professorId);
 
         if (vinculosErr) {
           throw vinculosErr;
         }
 
-        // Remove turmas duplicadas caso o professor
-        // lecione mais de uma disciplina na mesma turma.
+        type TurmaVinculo = {
+          turmas?: Turma[] | null;
+        };
+
         const turmasUnicasMap = new Map<string, Turma>();
 
-        (vinculos ?? []).forEach((v: any) => {
-          const turma = v?.turmas;
+        (vinculos ?? []).forEach((v: TurmaVinculo) => {
+          const turma = Array.isArray(v?.turmas)
+            ? v.turmas[0]
+            : v?.turmas;
 
           if (turma?.id && !turmasUnicasMap.has(turma.id)) {
-            turmasUnicasMap.set(turma.id, turma as Turma);
+            turmasUnicasMap.set(turma.id, turma);
           }
         });
 
+
         const listaTurmas = Array.from(turmasUnicasMap.values());
 
-        // Busca a quantidade de alunos de cada turma.
         const turmasComContagem: TurmaComAlunos[] = await Promise.all(
           listaTurmas.map(async (turma) => {
             const { count, error: countError } = await supabase
@@ -136,14 +110,10 @@ export function ProfessorTurmas() {
   }, [professor?.id]);
 
   return (
-    <AppLayout
-      navItems={navItems}
-      brandLabel="EduGrade"
-      brandSub="Área do Professor"
-    >
+    <AppLayout navItems={professorNavItems}>
       <PageHeader
         title="Minhas turmas"
-        description="Visualize as turmas vinculadas a você e acesse rapidamente o lançamento de notas."
+        description="Visualize as turmas vinculadas a você e acesse o lançamento de notas."
       />
 
       {loading ? (
@@ -226,4 +196,3 @@ export function ProfessorTurmas() {
     </AppLayout>
   );
 }
-

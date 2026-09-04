@@ -1,7 +1,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import type { LucideIcon } from "lucide-react";
 import {
   GraduationCap,
   School,
@@ -17,6 +16,7 @@ import { useAuth } from "../../context/AuthContext";
 import type { Turma, Aluno, Nota } from "../../lib/supabase";
 import { calculateMedia } from "../../lib/school";
 
+import { professorNavItems } from "../../lib/navigation";
 import { AppLayout } from "../../components/layout/AppLayout";
 import {
   Card,
@@ -26,40 +26,6 @@ import {
 } from "../../components/ui/Card";
 import { StatBadge, PageHeader } from "../../components/ui/Misc";
 import { BarChart } from "../../components/ui/Charts";
-
-interface NavItem {
-  to: string;
-  label: string;
-  icon: LucideIcon;
-}
-
-const navItems: NavItem[] = [
-  {
-    to: "/professor",
-    label: "Dashboard",
-    icon: School,
-  },
-  {
-    to: "/professor/turmas",
-    label: "Minhas turmas",
-    icon: GraduationCap,
-  },
-  {
-    to: "/professor/notas",
-    label: "Notas",
-    icon: ClipboardList,
-  },
-  {
-    to: "/professor/boletim",
-    label: "Boletins",
-    icon: BookOpen,
-  },
-  {
-    to: "/professor/atividades",
-    label: "Atividades",
-    icon: ImageIcon,
-  },
-];
 
 type SituacaoAluno =
   | "Aprovado"
@@ -77,13 +43,13 @@ interface BoletimAluno {
 }
 
 interface VinculoTurma {
-  turmas:
+  turmas?:
     | {
         id: string;
         nome: string;
         ano_letivo: number;
         curso?: string | null;
-      }
+      }[]
     | null;
 }
 
@@ -105,7 +71,9 @@ export function ProfessorBoletim() {
    * ============================================================
    */
   useEffect(() => {
-    if (!professor?.id) {
+    const professorId = professor?.id;
+
+    if (!professorId) {
       setTurmas([]);
       setLoading(false);
       return;
@@ -123,7 +91,7 @@ export function ProfessorBoletim() {
               curso
             )
           `)
-          .eq("professor_id", professor.id);
+          .eq("professor_id", professorId);
 
         if (error) {
           throw error;
@@ -132,7 +100,9 @@ export function ProfessorBoletim() {
         const turmasMap = new Map<string, Turma>();
 
         (vinculos as VinculoTurma[] | null)?.forEach((vinculo) => {
-          const turma = vinculo.turmas;
+          const turma = Array.isArray(vinculo.turmas)
+            ? vinculo.turmas[0]
+            : vinculo.turmas;
 
           if (turma && !turmasMap.has(turma.id)) {
             turmasMap.set(turma.id, turma as Turma);
@@ -176,7 +146,9 @@ export function ProfessorBoletim() {
    * ============================================================
    */
   useEffect(() => {
-    if (!professor?.id || !selectedTurma) {
+    const professorId = professor?.id;
+
+    if (!professorId || !selectedTurma) {
       setBoletim([]);
       setLoading(false);
       return;
@@ -213,7 +185,7 @@ export function ProfessorBoletim() {
         } = await supabase
           .from("notas")
           .select("*")
-          .eq("professor_id", professor.id)
+          .eq("professor_id", professorId)
           .eq("turma_id", selectedTurma);
 
         if (notasError) {
@@ -392,7 +364,7 @@ export function ProfessorBoletim() {
 
   return (
     <AppLayout
-      navItems={navItems}
+      navItems={professorNavItems}
       brandLabel="EduGrade"
       brandSub="Área do Professor"
     >
@@ -570,8 +542,8 @@ export function ProfessorBoletim() {
 
               <p className="mt-1 text-xs text-slate-500">
                 Professor: {professor?.nome ?? "Professor"}
-                {professor?.disciplina
-                  ? ` · ${professor.disciplina}`
+                {professor?.area_formacao
+                  ? ` · ${professor.area_formacao}`
                   : ""}
               </p>
             </CardHeader>

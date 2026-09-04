@@ -1,10 +1,22 @@
 import { CalendarClock, Download, ExternalLink } from "lucide-react";
-import type { Horario } from "../../lib/supabase";
+
+interface GradeHorarioItem {
+  id?: string;
+  dia_semana?: string | null;
+  hora_inicio?: string | null;
+  hora_fim?: string | null;
+  disciplina?: {
+    nome?: string | null;
+  } | null;
+  professor?: {
+    nome?: string | null;
+  } | null;
+}
 
 interface GradeHorariaProps {
-  horarios?: Horario[] | any[] | string | null;
+  horarios?: GradeHorarioItem[] | string | null;
   title?: string;
-  onSelectSlot?: (horario: Horario) => void;
+  onSelectSlot?: (horario: GradeHorarioItem) => void;
 }
 
 const diasSemana = [

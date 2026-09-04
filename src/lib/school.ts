@@ -1,9 +1,10 @@
+
 import { supabase } from "./supabase";
+
 import type {
   Aluno,
   Nota,
   Turma,
-  Disciplina,
   Atividade,
 } from "./supabase";
 
@@ -11,7 +12,6 @@ import type {
 // CONFIGURAÇÕES
 // ============================================================
 
-// Limite máximo de faltas permitido na instituição
 export const LIMITE_MAX_FALTAS = 25;
 
 // ============================================================
@@ -348,8 +348,8 @@ export const fallbackTurmas: Turma[] = [
 
 export async function getTurmas(): Promise<Turma[]> {
   const { data, error } = await supabase
-    .from("turmas")
-    .select("id,nome,ano_letivo")
+    .from("turma")
+    .select("id,nome,ano_letivo,curso,serie,ano")
     .order("nome", { ascending: true });
 
   if (error) {
@@ -366,19 +366,27 @@ export async function getTurmas(): Promise<Turma[]> {
     : fallbackTurmas;
 }
 
+// ============================================================
+// TURMAS DO PROFESSOR
+// ============================================================
+
 export async function getTurmasByProfessor(
   professorId: string
 ): Promise<Turma[]> {
   const { data, error } = await supabase
     .from("turma_professores")
-    .select("turma:turmas(*)")
+    .select(`
+      turma:turma(*)
+    `)
     .eq("professor_id", professorId);
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 
-  return ((data ?? []) as unknown as { turma: Turma }[])
+  return ((data ?? []) as unknown as { turma: Turma | null }[])
     .map((row) => row.turma)
-    .filter(Boolean);
+    .filter(Boolean) as Turma[];
 }
 
 // ============================================================
@@ -394,7 +402,9 @@ export async function getAlunosByTurma(
     .eq("turma_id", turmaId)
     .order("nome", { ascending: true });
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 
   return (data ?? []) as Aluno[];
 }
@@ -415,7 +425,9 @@ export async function getNotasByProfessorAndTurma(
     .eq("turma_id", turmaId)
     .eq("unidade", unidade);
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 
   return (data ?? []) as Nota[];
 }
@@ -455,21 +467,13 @@ export async function getNotasByTurma(
 // ============================================================
 // NOTAS DO ALUNO
 // ============================================================
-//
-// Aqui não usamos mais:
-// professor:professores(*)
-//
-// porque a tabela oficial agora é professores_oficial.
-// Buscamos os professores separadamente para evitar depender
-// de uma FK antiga apontando para a tabela professores.
-//
 
 export async function getNotasByAluno(alunoId: string) {
   const { data, error } = await supabase
     .from("notas")
     .select(`
       *,
-      turma:turmas(*),
+      turma:turma(*),
       disciplina:disciplinas(*)
     `)
     .eq("aluno_id", alunoId);
@@ -483,12 +487,12 @@ export async function getNotasByAluno(alunoId: string) {
     return [];
   }
 
-  const notas = data ?? [];
+  const notas = (data ?? []) as Array<Nota & { professor_id?: string | null }>;
 
   const professorIds = Array.from(
     new Set(
       notas
-        .map((nota: any) => nota.professor_id)
+        .map((nota) => nota.professor_id)
         .filter(Boolean)
     )
   );
@@ -496,11 +500,13 @@ export async function getNotasByAluno(alunoId: string) {
   let professores: ProfessorOficial[] = [];
 
   if (professorIds.length > 0) {
-    const { data: professoresData, error: professoresError } =
-      await supabase
-        .from("professores_oficial")
-        .select("*")
-        .in("id", professorIds);
+    const {
+      data: professoresData,
+      error: professoresError,
+    } = await supabase
+      .from("professores_oficial")
+      .select("*")
+      .in("id", professorIds);
 
     if (professoresError) {
       console.error(
@@ -520,7 +526,7 @@ export async function getNotasByAluno(alunoId: string) {
     ])
   );
 
-  return notas.map((nota: any) => ({
+  return notas.map((nota) => ({
     ...nota,
     professor:
       professoresMap.get(nota.professor_id) ?? null,
@@ -552,9 +558,7 @@ export async function getHorariosByTurma(
   return data?.arquivo_url ?? null;
 }
 
-export async function getHorariosByProfessor(
-  professorId: string
-): Promise<string | null> {
+export async function getHorariosByProfessor(): Promise<string | null> {
   // Mantido para compatibilidade.
   return null;
 }
@@ -596,7 +600,7 @@ export async function getAtividadesByTurma(
     .select(`
       *,
       disciplina:disciplinas(id, nome),
-      turma:turmas(id, nome)
+      turma:turma(id, nome)
     `)
     .eq("turma_id", turmaId)
     .order("prazo", { ascending: true });
@@ -610,13 +614,12 @@ export async function getAtividadesByTurma(
     return [];
   }
 
-  const atividades = data ?? [];
+  const atividades = (data ?? []) as Atividade[];
 
-  // Buscar os professores na nova tabela oficial
   const professorIds = Array.from(
     new Set(
       atividades
-        .map((atividade: any) => atividade.professor_id)
+        .map((atividade) => atividade.professor_id)
         .filter(Boolean)
     )
   );
@@ -624,11 +627,13 @@ export async function getAtividadesByTurma(
   let professores: ProfessorOficial[] = [];
 
   if (professorIds.length > 0) {
-    const { data: professoresData, error: professoresError } =
-      await supabase
-        .from("professores_oficial")
-        .select("id,nome")
-        .in("id", professorIds);
+    const {
+      data: professoresData,
+      error: professoresError,
+    } = await supabase
+      .from("professores_oficial")
+      .select("id,nome")
+      .in("id", professorIds);
 
     if (professoresError) {
       console.error(
@@ -648,12 +653,16 @@ export async function getAtividadesByTurma(
     ])
   );
 
-  return atividades.map((atividade: any) => ({
+  return atividades.map((atividade) => ({
     ...atividade,
     professor:
       professoresMap.get(atividade.professor_id) ?? null,
   })) as Atividade[];
 }
+
+// ============================================================
+// ATIVIDADES DO ALUNO
+// ============================================================
 
 export async function getAtividadesByAluno(
   alunoId: string,
@@ -690,21 +699,22 @@ export async function getAtividadesByAluno(
     }
   }
 
-  // FALLBACK
   console.warn(
     "Nenhuma atividade encontrada pelo ID da turma do aluno. " +
       "Buscando todas as atividades como fallback..."
   );
 
-  const { data: allData, error: allError } =
-    await supabase
-      .from("atividades")
-      .select(`
-        *,
-        disciplina:disciplinas(id, nome),
-        turma:turmas(id, nome)
-      `)
-      .order("prazo", { ascending: true });
+  const {
+    data: allData,
+    error: allError,
+  } = await supabase
+    .from("atividades")
+    .select(`
+      *,
+      disciplina:disciplinas(id, nome),
+      turma:turma(id, nome)
+    `)
+    .order("prazo", { ascending: true });
 
   if (allError) {
     console.error(
@@ -715,12 +725,12 @@ export async function getAtividadesByAluno(
     return [];
   }
 
-  const atividades = allData ?? [];
+  const atividades = (allData ?? []) as Atividade[];
 
   const professorIds = Array.from(
     new Set(
       atividades
-        .map((atividade: any) => atividade.professor_id)
+        .map((atividade) => atividade.professor_id)
         .filter(Boolean)
     )
   );
@@ -745,7 +755,7 @@ export async function getAtividadesByAluno(
     ])
   );
 
-  return atividades.map((atividade: any) => ({
+  return atividades.map((atividade) => ({
     ...atividade,
     professor:
       professoresMap.get(atividade.professor_id) ?? null,
@@ -971,12 +981,14 @@ export function getSituacaoFromMedia(
 // DADOS DO ALUNO
 // ============================================================
 
-export async function getAlunoData(alunoId: string) {
+export async function getAlunoData(
+  alunoId: string
+) {
   const { data, error } = await supabase
     .from("alunos")
     .select(`
       *,
-      turma:turmas(*)
+      turma:turma(*)
     `)
     .eq("id", alunoId)
     .single();
@@ -987,3 +999,4 @@ export async function getAlunoData(alunoId: string) {
 
   return data;
 }
+
