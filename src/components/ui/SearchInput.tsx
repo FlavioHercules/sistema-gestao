@@ -18,7 +18,7 @@ export function SearchInput({
       />
       <input
         placeholder={placeholder}
-        className="w-full h-10 rounded-lg border border-slate-700 bg-slate-800/60 pl-9 pr-3 text-sm text-slate-100 placeholder:text-slate-500 transition-all focus:outline-none focus:ring-2 focus:ring-sky-400/60 focus:border-sky-400/60"
+        className="h-10 w-full rounded-lg border border-[#E2E8F0] bg-white pl-9 pr-3 text-sm text-[#172033] placeholder:text-[#64748B] transition-all focus:border-[#00469F] focus:outline-none focus:ring-2 focus:ring-[#00469F]/20"
         {...props}
       />
     </div>

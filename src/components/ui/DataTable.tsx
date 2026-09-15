@@ -22,10 +22,10 @@ export function DataTable<T>({
   rowKey,
 }: DataTableProps<T>) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-800">
+    <div className="overflow-x-auto rounded-lg border border-[#E2E8F0] bg-white">
       <table className="w-full text-sm">
         <thead>
-          <tr className="bg-slate-900/80 text-left text-slate-400">
+          <tr className="bg-[#00469F] text-left text-white">
             {columns.map((c) => (
               <th
                 key={c.key}
@@ -50,10 +50,10 @@ export function DataTable<T>({
             data.map((row) => (
               <tr
                 key={rowKey(row)}
-                className="bg-slate-900/30 hover:bg-slate-800/40 transition-colors"
+                className="bg-white hover:bg-[#E8F0FA] transition-colors"
               >
                 {columns.map((c) => (
-                  <td key={c.key} className={`px-4 py-3 text-slate-200 ${c.className ?? ""}`}>
+                  <td key={c.key} className={`px-4 py-3 text-[#172033] ${c.className ?? ""}`}>
                     {c.render
                       ? c.render(row)
                       : String((row as Record<string, unknown>)[c.key] ?? "")}

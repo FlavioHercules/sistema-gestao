@@ -21,6 +21,8 @@ import { CoordenacaoAssociacoesPage } from "./pages/coordenacao/AssociacoesPage"
 import { UsuariosPage } from "./pages/coordenacao/UsuariosPage";
 import { CoordenacaoHorariosPage } from "./pages/coordenacao/HorariosPage";
 import { CoordenacaoAvisosPage } from "./pages/coordenacao/AvisosPage";
+import { professorNavItems, secretariaNavItems } from "./lib/navigation";
+import ReservasEquipamentosPage from "./pages/ReservasEquipamentosPage";
 
 // IMPORTANTE:
 // ReservasEspacosPage está sendo importado como DEFAULT
@@ -88,6 +90,24 @@ export default function App() {
             element={
               <ProtectedRoute roles={["secretaria"]}>
                 <ListaTurmas />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/secretaria/reservas"
+            element={
+              <ProtectedRoute roles={["secretaria"]}>
+                <CoordenacaoReservasEspacosPage navItems={secretariaNavItems} canManage={false} />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/secretaria/equipamentos"
+            element={
+              <ProtectedRoute roles={["secretaria"]}>
+                <ReservasEquipamentosPage navItems={secretariaNavItems} canManage={false} />
               </ProtectedRoute>
             }
           />
@@ -181,6 +201,15 @@ export default function App() {
             }
           />
 
+          <Route
+            path="/coordenacao/equipamentos"
+            element={
+              <ProtectedRoute roles={["coordenacao"]}>
+                <ReservasEquipamentosPage canManage />
+              </ProtectedRoute>
+            }
+          />
+
           {/* =========================
               ROTAS DO PROFESSOR
           ========================= */}
@@ -239,6 +268,15 @@ export default function App() {
             element={
               <ProtectedRoute roles={["professor"]}>
                 <ProfessorReservasEspacosPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/professor/equipamentos"
+            element={
+              <ProtectedRoute roles={["professor"]}>
+                <ReservasEquipamentosPage navItems={professorNavItems} canManage={false} />
               </ProtectedRoute>
             }
           />

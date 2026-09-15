@@ -11,7 +11,7 @@ import {
   Shield,
   ClipboardList,
   Layers,
-  ImageIcon,
+  Package,
 } from "lucide-react";
 
 export interface NavItem {
@@ -57,6 +57,12 @@ export const professorNavItems: NavItem[] = [
     to: "/professor/reservas",
     label: "Reservas de Espaços",
     icon: CalendarDays,
+  },
+  {
+    section: "Serviços",
+    to: "/professor/equipamentos",
+    label: "Reservas de Equipamentos",
+    icon: Package,
   },
 ];
 
@@ -104,6 +110,12 @@ export const coordenacaoNavItems: NavItem[] = [
     icon: CalendarDays,
   },
   {
+    section: "Operações",
+    to: "/coordenacao/equipamentos",
+    label: "Reservas de Equipamentos",
+    icon: Package,
+  },
+  {
     section: "Comunicação",
     to: "/coordenacao/avisos",
     label: "Avisos",
@@ -115,4 +127,12 @@ export const coordenacaoNavItems: NavItem[] = [
     label: "Usuários",
     icon: Shield,
   },
+];
+
+export const secretariaNavItems: NavItem[] = [
+  { section: "Principal", to: "/secretaria", label: "Dashboard", icon: School },
+  { section: "Gestão", to: "/secretaria/alunos", label: "Alunos", icon: GraduationCap },
+  { section: "Gestão", to: "/secretaria/turmas", label: "Turmas", icon: Users },
+  { section: "Serviços", to: "/secretaria/reservas", label: "Reservas de Espaços", icon: CalendarDays },
+  { section: "Serviços", to: "/secretaria/equipamentos", label: "Reservas de Equipamentos", icon: Package },
 ];

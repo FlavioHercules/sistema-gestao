@@ -115,34 +115,34 @@ export function Login() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-slate-950 text-slate-200">
+    <div className="cetep-login relative min-h-screen overflow-hidden bg-[#F5F7FA] text-[#172033]">
       {/* Background ambient */}
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-40 -left-40 h-96 w-96 rounded-full bg-sky-500/10 blur-3xl" />
-        <div className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full bg-emerald-500/10 blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-slate-500/5 blur-3xl" />
+        <div className="absolute inset-x-0 top-0 h-2 bg-[#FF0000]" />
+        <div className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-[#E8F0FA]" />
+        <div className="absolute -bottom-48 -left-32 h-96 w-96 rounded-full bg-[#E8F0FA]" />
       </div>
 
       <div className="relative flex min-h-screen items-center justify-center px-4 py-10">
         <div className="w-full max-w-md">
           <div className="mb-8 flex flex-col items-center text-center">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-500/15 text-sky-300 ring-1 ring-sky-500/30">
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-[#00469F] text-white shadow-lg shadow-[#00469F]/20">
               <GraduationCap size={28} />
             </div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">EduGrade</h1>
-            <p className="mt-1.5 text-sm text-slate-400">
+            <h1 className="text-2xl font-bold text-[#003575] tracking-tight">EduGrade</h1>
+            <p className="mt-1.5 text-sm text-[#64748B]">
               Sistema de Gestão Escolar de Notas
             </p>
           </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 shadow-2xl shadow-black/40 backdrop-blur-md sm:p-8">
-            <div className="mb-6 grid grid-cols-2 gap-1 rounded-lg bg-slate-800/60 p-1">
+          <div className="rounded-xl border border-[#E2E8F0] bg-white p-6 shadow-xl shadow-[#003575]/10 sm:p-8">
+            <div className="mb-6 grid grid-cols-2 gap-1 rounded-lg bg-[#E8F0FA] p-1">
               <button
                 onClick={() => setMode("login")}
                 className={`flex items-center justify-center gap-2 rounded-md py-2 text-sm font-medium transition-all ${
                   mode === "login"
-                    ? "bg-sky-500 text-white shadow"
-                    : "text-slate-400 hover:text-white"
+                    ? "bg-[#00469F] text-white shadow"
+                    : "text-[#64748B] hover:text-[#003575]"
                 }`}
               >
                 <LogIn size={15} />
@@ -152,8 +152,8 @@ export function Login() {
                 onClick={() => setMode("aluno")}
                 className={`flex items-center justify-center gap-2 rounded-md py-2 text-sm font-medium transition-all ${
                   mode === "aluno"
-                    ? "bg-emerald-500 text-white shadow"
-                    : "text-slate-400 hover:text-white"
+                    ? "bg-[#00469F] text-white shadow"
+                    : "text-[#64748B] hover:text-[#003575]"
                 }`}
               >
                 <UserCircle2 size={15} />
@@ -189,7 +189,7 @@ export function Login() {
               </form>
             ) : mode === "aluno" ? (
               <form onSubmit={handleAlunoAccess} className="space-y-4">
-                <p className="-mt-2 text-xs text-slate-400">
+                <p className="-mt-2 text-xs text-[#64748B]">
                   Entre com a sua turma, nome completo e data de nascimento para consultar suas notas.
                 </p>
                 <Select label="Turma" value={turmaId} onChange={(e) => setTurmaId(e.target.value)} required>
@@ -220,7 +220,7 @@ export function Login() {
             ) : null}
           </div>
 
-          <p className="mt-6 text-center text-xs text-slate-500">
+          <p className="mt-6 text-center text-xs text-[#64748B]">
             Acesso restrito a usuários autorizados.
           </p>
         </div>

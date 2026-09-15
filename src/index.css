@@ -7,53 +7,136 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
   body {
-    @apply bg-slate-950 text-slate-200;
+    @apply bg-[#F5F7FA] text-[#172033];
     font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   }
+
   * {
     scrollbar-width: thin;
-    scrollbar-color: rgb(51 65 85) transparent;
+    scrollbar-color: #00469F transparent;
   }
+
   *::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
+
   *::-webkit-scrollbar-track {
     background: transparent;
   }
+
   *::-webkit-scrollbar-thumb {
-    background-color: rgb(51 65 85);
+    background-color: #00469F;
     border-radius: 4px;
   }
 }
 
+/* ============================================================
+   IDENTIDADE VISUAL CETEP
+   ============================================================ */
+
+:root {
+  --cetep-blue: #00469F;
+  --cetep-blue-dark: #003575;
+  --cetep-blue-light: #E8F0FA;
+
+  --cetep-red: #FF0000;
+  --cetep-red-dark: #CC0000;
+  --cetep-red-light: #FFEAEA;
+
+  --background: #F5F7FA;
+  --surface: #FFFFFF;
+
+  --text: #172033;
+  --text-muted: #64748B;
+
+  --border: #E2E8F0;
+}
+
+/* Conteudo legado: claro e legivel, mantendo a sidebar azul isolada. */
+.cetep-shell main { background: var(--background); color: var(--text); }
+.cetep-shell main [class*="bg-slate-950"],
+.cetep-shell main [class*="bg-slate-900"],
+.cetep-shell main [class*="bg-slate-800"],
+.cetep-shell main [class*="bg-slate-700"] { background-color: var(--surface) !important; }
+.cetep-shell main [class*="border-slate-700"],
+.cetep-shell main [class*="border-slate-800"],
+.cetep-shell main [class*="border-slate-600"] { border-color: var(--border) !important; }
+.cetep-shell main [class*="divide-slate-800"] > :not([hidden]) ~ :not([hidden]) { border-color: var(--border) !important; }
+.cetep-shell main .bg-sky-500,
+.cetep-shell main .bg-sky-600,
+.cetep-shell main .bg-blue-600 { background-color: var(--cetep-blue) !important; }
+.cetep-shell main .text-sky-300,
+.cetep-shell main .text-sky-400,
+.cetep-shell main .text-sky-500,
+.cetep-shell main .text-blue-600 { color: var(--cetep-blue) !important; }
+.cetep-shell main .bg-rose-500,
+.cetep-shell main .bg-red-500 { background-color: var(--cetep-red) !important; }
+.cetep-shell main .text-rose-300,
+.cetep-shell main .text-rose-400 { color: var(--cetep-red-dark) !important; }
+.cetep-shell main .text-emerald-300,
+.cetep-shell main .text-emerald-400 { color: #047857 !important; }
+.cetep-shell main .text-amber-300,
+.cetep-shell main .text-amber-400 { color: #a16207 !important; }
+.cetep-shell main .text-violet-300,
+.cetep-shell main .text-violet-400 { color: #6d28d9 !important; }
+input:focus, select:focus, textarea:focus {
+  border-color: var(--cetep-blue) !important;
+  box-shadow: 0 0 0 3px rgb(0 70 159 / 12%) !important;
+}
+
+/* ============================================================
+   ANIMAÇÕES
+   ============================================================ */
+
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.96); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 @keyframes slideIn {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(0); }
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
 }
+
+/* ============================================================
+   IMPRESSÃO
+   ============================================================ */
+
 @media print {
-  /* Oculta tudo na página por padrão quando o comando de impressão for acionado */
   body * {
     visibility: hidden !important;
   }
 
-  /* Torna visível apenas o boletim marcado para impressão e seus filhos */
-  .printing-active, .printing-active * {
+  .printing-active,
+  .printing-active * {
     visibility: visible !important;
   }
 
-  /* Posiciona o boletim ativo no topo da folha limpo de margens estranhas */
   .printing-active {
     position: absolute !important;
     left: 0 !important;

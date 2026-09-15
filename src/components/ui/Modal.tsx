@@ -48,9 +48,9 @@ export function Modal({
       >
         <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-4 border-b border-slate-800">
           <div>
-            <h2 className="text-lg font-semibold text-white tracking-tight">{title}</h2>
+            <h2 className="text-lg font-semibold leading-tight tracking-[-0.01em] text-[#003575]">{title}</h2>
             {description && (
-              <p className="mt-1 text-sm text-slate-400">{description}</p>
+              <p className="mt-1 text-sm leading-5 text-[#64748B]">{description}</p>
             )}
           </div>
           <button

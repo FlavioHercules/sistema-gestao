@@ -90,7 +90,7 @@ export function AppLayout({
                       "flex items-center gap-3 rounded-lg px-3 py-2.5",
                       "text-sm font-medium transition-all",
                       isActive
-                        ? "bg-sky-500/15 text-sky-300 ring-1 ring-sky-500/20"
+                        ? "bg-white/15 text-white ring-1 ring-white/25"
                         : "text-slate-400 hover:bg-slate-800/60 hover:text-white",
                     ].join(" ")
                   }
@@ -108,10 +108,10 @@ export function AppLayout({
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div className="cetep-shell min-h-screen bg-slate-950 text-white">
 
       {/* SIDEBAR DESKTOP */}
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 border-r border-slate-800 bg-slate-900 lg:flex lg:flex-col">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 border-r border-slate-800 bg-[#0B4F9C] lg:flex lg:flex-col">
 
         {/* BRAND */}
         <div className="flex items-center gap-3 border-b border-slate-800 px-5 py-5">
@@ -164,7 +164,7 @@ export function AppLayout({
       </aside>
 
       {/* MOBILE TOP BAR */}
-      <div className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-800 bg-slate-900/80 px-4 py-3 backdrop-blur-md lg:hidden">
+      <div className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-800 bg-[#0B4F9C]/90 px-4 py-3 backdrop-blur-md lg:hidden">
 
         <div className="flex items-center gap-2.5">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-500/15 text-sky-300 ring-1 ring-sky-500/20">
@@ -200,7 +200,7 @@ export function AppLayout({
             onClick={() => setOpen(false)}
           />
 
-          <div className="absolute inset-y-0 left-0 flex w-72 max-w-[80%] flex-col border-r border-slate-800 bg-slate-900 shadow-2xl">
+          <div className="absolute inset-y-0 left-0 flex w-72 max-w-[80%] flex-col border-r border-slate-800 bg-[#0B4F9C] shadow-2xl">
 
             {/* HEADER */}
             <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">

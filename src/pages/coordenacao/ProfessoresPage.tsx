@@ -40,8 +40,22 @@ type ProfessorWithTurmas = ProfessorOficial & {
   anos?: string[];
 };
 
+const CURSOS_TECNICOS = [
+  "Agropecuária",
+  "Nutrição",
+  "Segurança do Trabalho",
+  "Edificações",
+  "Informática",
+];
+
+const ANOS_SERIES = [
+  "1º Ano",
+  "2º Ano",
+  "3º Ano",
+];
+
 const AREAS_POR_CURSO: Record<string, string[]> = {
-  Informatica: [
+  Informática: [
     "Desenvolvimento de Software",
     "Banco de Dados",
     "Redes e Infraestrutura",
@@ -49,33 +63,15 @@ const AREAS_POR_CURSO: Record<string, string[]> = {
     "Hardware",
   ],
 
-  Administracao: [
-    "Ciências Contábeis",
-    "Gestão de Pessoas",
-    "Marketing e Vendas",
-    "Economia",
-    "Logística",
-  ],
-
-  Enfermagem: [
-    "Enfermagem Geral",
-    "Farmacologia",
-    "Emergências Médicas",
-    "Saúde Pública",
-    "Enfermagem Cirúrgica",
-  ],
-
-  "Geral / Base Comum": [
-    "Matemática",
-    "Letras / Português",
-    "História",
-    "Geografia",
-    "Física",
-    "Química",
-    "Biologia",
-    "Inglês",
-  ],
 };
+
+function normalizarFiltro(valor: string) {
+  return valor
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
 
 export function CoordenacaoProfessoresPage() {
   const [professores, setProfessores] = useState<
@@ -156,12 +152,22 @@ export function CoordenacaoProfessoresPage() {
        * Por isso o carregamento das turmas é tratado
        * separadamente e não impede a lista de professores.
        */
-      const {
-        data: tp,
-        error: tpError,
-      } = await supabase
-        .from("turma_professores")
-        .select("professor_id, turmas(curso, ano)");
+      const [{ data: turmasData, error: turmasError }, { data: tp, error: tpError }] =
+        await Promise.all([
+          supabase
+            .from("turmas")
+            .select("id, curso, ano"),
+          supabase
+            .from("turma_professores")
+            .select("professor_id, turma_id"),
+        ]);
+
+      if (turmasError) {
+        console.warn(
+          "Não foi possível carregar os cursos das turmas:",
+          turmasError.message
+        );
+      }
 
       if (tpError) {
         console.warn(
@@ -182,6 +188,13 @@ export function CoordenacaoProfessoresPage() {
         Set<string>
       >();
 
+      const turmaMap = new Map(
+        (turmasData ?? []).map((turma) => [
+          turma.id,
+          turma,
+        ])
+      );
+
       for (const row of tp ?? []) {
         const profId = row.professor_id;
 
@@ -190,12 +203,9 @@ export function CoordenacaoProfessoresPage() {
           (counts.get(profId) ?? 0) + 1
         );
 
-        if (row.turmas) {
-          const turma =
-            row.turmas as unknown as {
-              curso?: string;
-              ano?: string;
-            };
+        const turma = turmaMap.get(row.turma_id);
+
+        if (turma) {
 
           if (turma.curso) {
             if (!cursosMap.has(profId)) {
@@ -328,20 +338,8 @@ export function CoordenacaoProfessoresPage() {
    * =========================================================
    */
   const cursosDisponiveis = useMemo(() => {
-    const list = new Set<string>();
-
-    Object.keys(AREAS_POR_CURSO).forEach(
-      (curso) => list.add(curso)
-    );
-
-    professores.forEach((professor) =>
-      professor.cursos?.forEach(
-        (curso) => list.add(curso)
-      )
-    );
-
-    return Array.from(list).sort();
-  }, [professores]);
+    return CURSOS_TECNICOS;
+  }, []);
 
   /**
    * =========================================================
@@ -349,21 +347,8 @@ export function CoordenacaoProfessoresPage() {
    * =========================================================
    */
   const anosDisponiveis = useMemo(() => {
-    const list = new Set<string>([
-      "1º Ano",
-      "2º Ano",
-      "3º Ano",
-      "4º Ano",
-    ]);
-
-    professores.forEach((professor) =>
-      professor.anos?.forEach(
-        (ano) => list.add(ano)
-      )
-    );
-
-    return Array.from(list).sort();
-  }, [professores]);
+    return ANOS_SERIES;
+  }, []);
 
   /**
    * =========================================================
@@ -432,13 +417,21 @@ export function CoordenacaoProfessoresPage() {
           selectedCurso === "TODOS" ||
           (
             professor.cursos ?? []
-          ).includes(selectedCurso);
+          ).some(
+            (curso) =>
+              normalizarFiltro(curso) ===
+              normalizarFiltro(selectedCurso)
+          );
 
         const matchesAno =
           selectedAno === "TODOS" ||
           (
             professor.anos ?? []
-          ).includes(selectedAno);
+          ).some(
+            (ano) =>
+              normalizarFiltro(ano) ===
+              normalizarFiltro(selectedAno)
+          );
 
         const matchesArea =
           selectedArea === "TODAS" ||

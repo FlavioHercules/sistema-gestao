@@ -8,15 +8,15 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variants: Record<string, string> = {
   primary:
-    "bg-sky-500 text-white hover:bg-sky-400 shadow-lg shadow-sky-500/20 focus-visible:ring-sky-400",
+    "bg-[#00469F] text-white hover:bg-[#003575] focus-visible:ring-[#00469F]",
   secondary:
-    "bg-slate-700 text-slate-100 hover:bg-slate-600 focus-visible:ring-slate-400",
+    "bg-[#E8F0FA] text-[#003575] hover:bg-[#d5e4f7] focus-visible:ring-[#00469F]",
   ghost:
-    "bg-transparent text-slate-300 hover:bg-slate-800/70 hover:text-white focus-visible:ring-slate-400",
+    "bg-transparent text-[#00469F] hover:bg-[#E8F0FA] hover:text-[#003575] focus-visible:ring-[#00469F]",
   danger:
-    "bg-rose-500/90 text-white hover:bg-rose-500 shadow-lg shadow-rose-500/20 focus-visible:ring-rose-400",
+    "bg-[#FF0000] text-white hover:bg-[#CC0000] focus-visible:ring-[#FF0000]",
   outline:
-    "border border-slate-700 bg-transparent text-slate-200 hover:bg-slate-800/70 hover:border-slate-600 focus-visible:ring-slate-400",
+    "border border-[#E2E8F0] bg-white text-[#172033] hover:bg-[#E8F0FA] hover:border-[#00469F] focus-visible:ring-[#00469F]",
 };
 
 const sizes: Record<string, string> = {
@@ -34,7 +34,7 @@ export function Button({
 }: ButtonProps) {
   return (
     <button
-      className={`inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:opacity-50 disabled:pointer-events-none ${variants[variant]} ${sizes[size]} ${className}`}
+      className={`inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:opacity-50 disabled:pointer-events-none ${variants[variant]} ${sizes[size]} ${className}`}
       {...props}
     >
       {children}
