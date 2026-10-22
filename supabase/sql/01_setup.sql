@@ -83,6 +83,9 @@ CREATE TABLE IF NOT EXISTS public.alunos (
 ALTER TABLE IF EXISTS public.usuarios
   ADD COLUMN IF NOT EXISTS aluno_id uuid;
 
+ALTER TABLE IF EXISTS public.usuarios
+  ADD COLUMN IF NOT EXISTS curso text;
+
 DO $$ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.table_constraints

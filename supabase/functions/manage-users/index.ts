@@ -18,6 +18,7 @@ interface UserPayload {
   nome: string;
   email: string;
   senha: string;
+  curso?: string | null;
   tipo_usuario: "secretaria" | "professor" | "aluno";
   professor_id?: string | null;
   aluno_id?: string | null;
@@ -112,7 +113,15 @@ Deno.serve(async (req: Request) => {
     // ---- CREATE user ----
     if (req.method === "POST") {
       const body = (await req.json()) as UserPayload;
-      const { nome, email, senha, tipo_usuario, professor_id, aluno_id } = body;
+      const {
+        nome,
+        email,
+        senha,
+        curso,
+        tipo_usuario,
+        professor_id,
+        aluno_id,
+      } = body;
 
       if (!nome || !email || !senha || !tipo_usuario) {
         return new Response(JSON.stringify({ error: "Dados incompletos." }), {
@@ -135,6 +144,7 @@ Deno.serve(async (req: Request) => {
         nome,
         email,
         tipo_usuario,
+        curso: tipo_usuario === "professor" ? curso ?? null : null,
         professor_id: professor_id ?? null,
         aluno_id: aluno_id ?? null,
       });

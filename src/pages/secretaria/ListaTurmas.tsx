@@ -414,7 +414,7 @@ export function ListaTurmas() {
                             `/secretaria?turma=${turma.id}`
                           )
                         }
-                        className="text-left font-medium text-white transition-colors hover:text-sky-300"
+                        className="text-left font-medium text-[#111111] transition-colors hover:text-sky-300"
                         title="Ver alunos e notas desta turma"
                       >
                         {turma.nome}

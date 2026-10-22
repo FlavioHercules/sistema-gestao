@@ -392,7 +392,7 @@ export function CoordenacaoAssociacoesPage() {
                         </div>
 
                         <div>
-                          <p className="font-semibold text-white">
+                          <p className="font-semibold !text-[#111111] !opacity-100">
                             {a.professores?.nome ||
                               "N/A"}
                           </p>
@@ -410,7 +410,7 @@ export function CoordenacaoAssociacoesPage() {
                     header: "Turma",
                     render: (a) => (
                       <div>
-                        <span className="font-medium text-slate-200">
+                        <span className="font-medium !text-[#111111] !opacity-100">
                           {a.turmas?.nome || "N/A"}
                         </span>
 

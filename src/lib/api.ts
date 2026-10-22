@@ -106,6 +106,7 @@ export interface CreateUserPayload {
   nome: string;
   email: string;
   senha: string;
+  curso?: string | null;
 
   tipo_usuario:
     | "secretaria"

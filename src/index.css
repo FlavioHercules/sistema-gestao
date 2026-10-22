@@ -49,8 +49,8 @@
   --background: #F5F7FA;
   --surface: #FFFFFF;
 
-  --text: #172033;
-  --text-muted: #64748B;
+  --text: #111827;
+  --text-muted: #475569;
 
   --border: #E2E8F0;
 }
@@ -71,17 +71,115 @@
 .cetep-shell main .text-sky-300,
 .cetep-shell main .text-sky-400,
 .cetep-shell main .text-sky-500,
+.cetep-shell main .text-sky-200,
+.cetep-shell main .text-blue-300,
+.cetep-shell main .text-blue-400,
 .cetep-shell main .text-blue-600 { color: var(--cetep-blue) !important; }
 .cetep-shell main .bg-rose-500,
 .cetep-shell main .bg-red-500 { background-color: var(--cetep-red) !important; }
 .cetep-shell main .text-rose-300,
-.cetep-shell main .text-rose-400 { color: var(--cetep-red-dark) !important; }
+.cetep-shell main .text-rose-400,
+.cetep-shell main .text-rose-200 { color: var(--cetep-red-dark) !important; }
 .cetep-shell main .text-emerald-300,
-.cetep-shell main .text-emerald-400 { color: #047857 !important; }
+.cetep-shell main .text-emerald-400,
+.cetep-shell main .text-emerald-200 { color: #047857 !important; }
 .cetep-shell main .text-amber-300,
-.cetep-shell main .text-amber-400 { color: #a16207 !important; }
+.cetep-shell main .text-amber-400,
+.cetep-shell main .text-amber-200 { color: #92400e !important; }
 .cetep-shell main .text-violet-300,
 .cetep-shell main .text-violet-400 { color: #6d28d9 !important; }
+.cetep-shell main .text-indigo-300,
+.cetep-shell main .text-indigo-400 { color: #4338ca !important; }
+.cetep-shell main .text-purple-300,
+.cetep-shell main .text-purple-400 { color: #6d28d9 !important; }
+.cetep-shell main .text-slate-400,
+.cetep-shell main .text-slate-500 { color: var(--text-muted) !important; }
+.cetep-shell main [class*="text-emerald-300/"],
+.cetep-shell main [class*="text-emerald-400/"],
+.cetep-shell main [class*="text-emerald-200/"] { color: #047857 !important; }
+.cetep-shell main [class*="text-amber-300/"],
+.cetep-shell main [class*="text-amber-400/"],
+.cetep-shell main [class*="text-amber-200/"] { color: #92400e !important; }
+.cetep-shell main [class*="text-rose-300/"],
+.cetep-shell main [class*="text-rose-400/"],
+.cetep-shell main [class*="text-rose-200/"] { color: var(--cetep-red-dark) !important; }
+.cetep-shell main [class*="text-slate-400/"],
+.cetep-shell main [class*="text-slate-500/"] { color: var(--text-muted) !important; }
+
+/* Textos claros precisam acompanhar os fundos legados convertidos para branco. */
+.cetep-shell main :is(
+  p,
+  span,
+  strong,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  div,
+  tr,
+  td,
+  th,
+  label,
+  li,
+  small,
+  input,
+  select,
+  textarea
+):is(.text-white, .text-slate-100, .text-slate-200, .text-slate-300):not(button):not(button *):not(a):not(a *) {
+  color: var(--text) !important;
+  opacity: 1 !important;
+}
+
+.cetep-shell main :is(button, a)[class*="bg-slate-"]:is(
+  [class*="text-white"],
+  [class*="text-slate-100"],
+  [class*="text-slate-200"],
+  [class*="text-slate-300"]
+) {
+  color: var(--text) !important;
+  opacity: 1 !important;
+}
+
+.cetep-shell main :is(button, a)[class*="hover:bg-slate-"][class*="hover:text-white"]:hover {
+  color: var(--text) !important;
+  opacity: 1 !important;
+}
+
+.cetep-shell main :is(button, a, [role="button"])[class*="hover:text-white"]:hover {
+  color: var(--text) !important;
+  opacity: 1 !important;
+}
+
+.cetep-shell main :is(button, a, [role="button"])[class*="hover:text-sky-300"]:hover,
+.cetep-shell main :is(button, a, [role="button"])[class*="hover:text-sky-400"]:hover {
+  color: var(--cetep-blue) !important;
+  opacity: 1 !important;
+}
+
+.cetep-shell main :is(
+  p,
+  span,
+  strong,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  div,
+  tr,
+  td,
+  th,
+  label,
+  li,
+  small
+).text-slate-400:not(button):not(button *):not(a):not(a *) {
+  color: var(--text-muted) !important;
+  opacity: 1 !important;
+}
+
 input:focus, select:focus, textarea:focus {
   border-color: var(--cetep-blue) !important;
   box-shadow: 0 0 0 3px rgb(0 70 159 / 12%) !important;

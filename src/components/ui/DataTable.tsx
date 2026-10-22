@@ -53,7 +53,7 @@ export function DataTable<T>({
                 className="bg-white hover:bg-[#E8F0FA] transition-colors"
               >
                 {columns.map((c) => (
-                  <td key={c.key} className={`px-4 py-3 text-[#172033] ${c.className ?? ""}`}>
+                  <td key={c.key} className={`px-4 py-3 !text-[#111111] ${c.className ?? ""}`}>
                     {c.render
                       ? c.render(row)
                       : String((row as Record<string, unknown>)[c.key] ?? "")}

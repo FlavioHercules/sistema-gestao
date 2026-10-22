@@ -35,6 +35,7 @@ type Usuario = {
   id: string;
   nome: string;
   email: string;
+  curso?: string | null;
   tipo_usuario:
     | "secretaria"
     | "coordenacao"
@@ -55,6 +56,7 @@ export function UsuariosPage() {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [cursoProfessor, setCursoProfessor] = useState("");
 
   const [tipoUsuario, setTipoUsuario] = useState<
     "secretaria" | "coordenacao" | "professor"
@@ -110,6 +112,7 @@ export function UsuariosPage() {
     setNome("");
     setEmail("");
     setSenha("");
+    setCursoProfessor("");
     setTipoUsuario("secretaria");
     setError("");
     setModalOpen(true);
@@ -139,6 +142,11 @@ export function UsuariosPage() {
       return;
     }
 
+    if (tipoUsuario === "professor" && !cursoProfessor) {
+      setError("Selecione o curso do professor.");
+      return;
+    }
+
     setSaving(true);
     setError("");
 
@@ -149,6 +157,10 @@ export function UsuariosPage() {
           email,
           senha,
           tipo_usuario: tipoUsuario,
+          curso:
+            tipoUsuario === "professor"
+              ? cursoProfessor
+              : null,
         },
         session?.access_token ?? ""
       );
@@ -158,6 +170,7 @@ export function UsuariosPage() {
       setNome("");
       setEmail("");
       setSenha("");
+      setCursoProfessor("");
       setTipoUsuario("secretaria");
 
       await loadUsuarios();
@@ -353,7 +366,7 @@ export function UsuariosPage() {
                   key: "nome",
                   header: "Nome",
                   render: (u) => (
-                    <span className="font-semibold text-white">
+                    <span className="font-semibold !text-[#111111] !opacity-100">
                       {u.nome}
                     </span>
                   ),
@@ -530,6 +543,42 @@ export function UsuariosPage() {
               </option>
             </select>
           </div>
+
+          {tipoUsuario === "professor" && (
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-slate-300">
+                Curso Técnico
+              </label>
+
+              <select
+                value={cursoProfessor}
+                onChange={(e) =>
+                  setCursoProfessor(e.target.value)
+                }
+                required
+                className="w-full rounded-lg border border-slate-800 bg-slate-900/90 px-3 py-2 text-sm text-slate-200 focus:border-sky-500 focus:outline-none"
+              >
+                <option value="">
+                  Selecione o curso
+                </option>
+                <option value="Agropecuária">
+                  Agropecuária
+                </option>
+                <option value="Nutrição">
+                  Nutrição
+                </option>
+                <option value="Segurança do Trabalho">
+                  Segurança do Trabalho
+                </option>
+                <option value="Edificações">
+                  Edificações
+                </option>
+                <option value="Informática">
+                  Informática
+                </option>
+              </select>
+            </div>
+          )}
         </form>
       </Modal>
 

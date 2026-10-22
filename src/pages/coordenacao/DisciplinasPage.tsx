@@ -387,7 +387,7 @@ export function CoordenacaoDisciplinasPage() {
                   key: "nome",
                   header: "Nome da Disciplina",
                   render: (d) => (
-                    <span className="font-semibold text-white">
+                    <span className="font-semibold !text-[#111111] !opacity-100">
                       {d.nome}
                     </span>
                   ),

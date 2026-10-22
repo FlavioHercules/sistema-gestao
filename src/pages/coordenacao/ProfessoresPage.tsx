@@ -23,6 +23,7 @@ type UsuarioProfessor = {
   nome: string;
   email: string;
   tipo_usuario: string;
+  curso?: string | null;
 };
 
 type ProfessorOficial = {
@@ -32,6 +33,7 @@ type ProfessorOficial = {
   created_at?: string;
   email?: string | null;
   area_formacao?: string | null;
+  curso?: string | null;
 };
 
 type ProfessorWithTurmas = ProfessorOficial & {
@@ -71,6 +73,34 @@ function normalizarFiltro(valor: string) {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim();
+}
+
+function cursosDoProfessor(professor: ProfessorWithTurmas) {
+  const cursos = new Set(professor.cursos ?? []);
+
+  if (professor.curso) {
+    cursos.add(professor.curso);
+  }
+
+  const area = normalizarFiltro(professor.area_formacao ?? "");
+  const cursoDaArea = Object.entries(AREAS_POR_CURSO).find(
+    ([, areas]) =>
+      areas.some((item) => normalizarFiltro(item) === area)
+  )?.[0];
+
+  if (cursoDaArea) {
+    cursos.add(cursoDaArea);
+  }
+
+  const cursoMencionadoNaArea = CURSOS_TECNICOS.find((curso) =>
+    area.includes(normalizarFiltro(curso))
+  );
+
+  if (cursoMencionadoNaArea) {
+    cursos.add(cursoMencionadoNaArea);
+  }
+
+  return Array.from(cursos);
 }
 
 export function CoordenacaoProfessoresPage() {
@@ -152,7 +182,12 @@ export function CoordenacaoProfessoresPage() {
        * Por isso o carregamento das turmas é tratado
        * separadamente e não impede a lista de professores.
        */
-      const [{ data: turmasData, error: turmasError }, { data: tp, error: tpError }] =
+      const [
+        { data: turmasData, error: turmasError },
+        { data: tp, error: tpError },
+        { data: legacyProfessores, error: legacyProfessoresError },
+        { data: usuariosData, error: usuariosError },
+      ] =
         await Promise.all([
           supabase
             .from("turmas")
@@ -160,6 +195,13 @@ export function CoordenacaoProfessoresPage() {
           supabase
             .from("turma_professores")
             .select("professor_id, turma_id"),
+          supabase
+            .from("professores")
+            .select("id, usuario_id"),
+          supabase
+            .from("usuarios")
+            .select("id, curso")
+            .eq("tipo_usuario", "professor"),
         ]);
 
       if (turmasError) {
@@ -173,6 +215,20 @@ export function CoordenacaoProfessoresPage() {
         console.warn(
           "Não foi possível carregar as turmas:",
           tpError.message
+        );
+      }
+
+      if (legacyProfessoresError) {
+        console.warn(
+          "Não foi possível mapear os professores antigos:",
+          legacyProfessoresError.message
+        );
+      }
+
+      if (usuariosError) {
+        console.warn(
+          "Não foi possível carregar os cursos dos usuários:",
+          usuariosError.message
         );
       }
 
@@ -195,8 +251,38 @@ export function CoordenacaoProfessoresPage() {
         ])
       );
 
+      const officialProfessorIds = new Set(
+        list.map((professor) => professor.id)
+      );
+
+      const cursoByUsuarioId = new Map(
+        (usuariosData ?? []).map((usuario) => [
+          usuario.id,
+          usuario.curso,
+        ])
+      );
+
+      const officialIdByLegacyId = new Map(
+        (legacyProfessores ?? [])
+          .filter((professor) => professor.usuario_id)
+          .map((professor) => [
+            professor.id,
+            list.find(
+              (officialProfessor) =>
+                officialProfessor.usuario_id ===
+                professor.usuario_id
+            )?.id,
+          ])
+      );
+
       for (const row of tp ?? []) {
-        const profId = row.professor_id;
+        const profId = officialProfessorIds.has(row.professor_id)
+          ? row.professor_id
+          : officialIdByLegacyId.get(row.professor_id);
+
+        if (!profId) {
+          continue;
+        }
 
         counts.set(
           profId,
@@ -238,6 +324,11 @@ export function CoordenacaoProfessoresPage() {
       setProfessores(
         list.map((professor) => ({
           ...professor,
+
+          curso:
+            cursoByUsuarioId.get(professor.usuario_id ?? "") ??
+            professor.curso ??
+            null,
 
           turma_count:
             counts.get(professor.id) ?? 0,
@@ -415,9 +506,7 @@ export function CoordenacaoProfessoresPage() {
 
         const matchesCurso =
           selectedCurso === "TODOS" ||
-          (
-            professor.cursos ?? []
-          ).some(
+          cursosDoProfessor(professor).some(
             (curso) =>
               normalizarFiltro(curso) ===
               normalizarFiltro(selectedCurso)
@@ -654,7 +743,10 @@ export function CoordenacaoProfessoresPage() {
                     professor
                   ) => (
                     <div>
-                      <p className="font-semibold text-white">
+                      <p
+                        className="font-semibold"
+                        style={{ color: "#111111", opacity: 1 }}
+                      >
                         {professor.nome}
                       </p>
 

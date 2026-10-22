@@ -44,7 +44,8 @@ const ANOS_SERIES = [
   "1º Ano",
   "2º Ano",
   "3º Ano",
-  "4º Ano",
+ 
+  
 ];
 
 /* =========================================================
@@ -492,7 +493,7 @@ export function CoordenacaoTurmasPage() {
                       </div>
 
                       <div>
-                        <p className="font-semibold text-white">
+                        <p className="font-semibold !text-[#111111] !opacity-100">
                           {turma.nome}
                         </p>
 
