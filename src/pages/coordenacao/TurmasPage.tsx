@@ -683,6 +683,7 @@ export function CoordenacaoTurmasPage() {
         >
           <Input
             label="Nome da Turma"
+            labelClassName="!text-white"
             required
             value={nomeTurma}
             onChange={(e) =>
@@ -694,7 +695,7 @@ export function CoordenacaoTurmasPage() {
           />
 
           <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-300">
+            <label className="text-xs font-medium text-white">
               Curso
             </label>
 
@@ -721,7 +722,7 @@ export function CoordenacaoTurmasPage() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
 
             <div className="space-y-1">
-              <label className="text-xs font-medium text-slate-300">
+              <label className="text-xs font-medium text-white">
                 Série / Ano
               </label>
 
@@ -749,6 +750,7 @@ export function CoordenacaoTurmasPage() {
 
             <Input
               label="Ano Letivo"
+              labelClassName="!text-white"
               type="number"
               required
               min={2020}

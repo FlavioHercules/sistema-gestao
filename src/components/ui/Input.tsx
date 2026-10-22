@@ -2,15 +2,16 @@ import type { InputHTMLAttributes, SelectHTMLAttributes, ReactNode } from "react
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
+  labelClassName?: string;
   error?: string;
   icon?: ReactNode;
 }
 
-export function Input({ label, error, icon, className = "", ...props }: InputProps) {
+export function Input({ label, labelClassName = "", error, icon, className = "", ...props }: InputProps) {
   return (
     <label className="block">
       {label && (
-        <span className="block mb-1.5 text-sm font-medium text-[#172033]">{label}</span>
+        <span className={`block mb-1.5 text-sm font-medium text-[#172033] ${labelClassName}`}>{label}</span>
       )}
       <div className="relative">
         {icon && (
