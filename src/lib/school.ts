@@ -348,8 +348,8 @@ export const fallbackTurmas: Turma[] = [
 
 export async function getTurmas(): Promise<Turma[]> {
   const { data, error } = await supabase
-    .from("turma")
-    .select("id,nome,ano_letivo,curso,serie,ano")
+    .from("turmas")
+    .select("*")
     .order("nome", { ascending: true });
 
   if (error) {
@@ -376,7 +376,7 @@ export async function getTurmasByProfessor(
   const { data, error } = await supabase
     .from("turma_professores")
     .select(`
-      turma:turma(*)
+      turma:turmas(*)
     `)
     .eq("professor_id", professorId);
 
@@ -473,7 +473,7 @@ export async function getNotasByAluno(alunoId: string) {
     .from("notas")
     .select(`
       *,
-      turma:turma(*),
+      turma:turmas(*),
       disciplina:disciplinas(*)
     `)
     .eq("aluno_id", alunoId);
@@ -988,7 +988,7 @@ export async function getAlunoData(
     .from("alunos")
     .select(`
       *,
-      turma:turma(*)
+      turma:turmas(*)
     `)
     .eq("id", alunoId)
     .single();
@@ -999,4 +999,3 @@ export async function getAlunoData(
 
   return data;
 }
-
